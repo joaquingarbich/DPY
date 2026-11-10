@@ -1,0 +1,4 @@
+.venv-pio/
+firmware/.pio/
+firmware/include/secretos.h
+.DS_Store
