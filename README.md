@@ -47,7 +47,9 @@ Un ESP32 en el secador mide la masa del mango, las temperaturas, las humedades y
 | Carpeta / archivo | Qué es |
 |---|---|
 | [`Documentacion_firmware_y_servidor_secador.md`](Documentacion_firmware_y_servidor_secador.md) | **Diseño completo** (pines, tareas, control, estados, mensajes, servidor). Se actualiza antes que el código. La §18 lista los cambios hechos al escribir el código |
+| [`GUIA_PUESTA_EN_MARCHA.md`](GUIA_PUESTA_EN_MARCHA.md) | **Por dónde empezar**: de este repositorio a un prototipo enviando datos a la nube, por fases |
 | [`MANUAL_OPERACION.md`](MANUAL_OPERACION.md) | **Uso diario** para el operario y el técnico |
+| [`hardware/CONEXIONES.md`](hardware/CONEXIONES.md) | **Conexiones** de sensores, microSD, ventilador y alimentación, con diagrama y lista de materiales |
 | [`firmware/`](firmware/) | Programa del ESP32 (PlatformIO). [`firmware/MANUAL.md`](firmware/MANUAL.md): cómo compilarlo, cargarlo y calibrar |
 | [`servidor/`](servidor/) | Node-RED, Grafana, página `/app/` y despliegue. [`servidor/MANUAL_DESPLIEGUE.md`](servidor/MANUAL_DESPLIEGUE.md): cómo probarlo en local y subirlo a la nube |
 
@@ -108,6 +110,14 @@ cd servidor && npm install
 npm test          # pruebas del servidor
 npm run dev       # MongoDB, broker, Node-RED y Grafana locales
 npm run simular   # (otra terminal) un lote simulado
+```
+
+### Conectar con la nube real
+
+```
+npm run verificar-nube                 # crea la base en Atlas si no existe y prueba HiveMQ (usa servidor/.env)
+npm run verificar-nube -- --escuchar 120   # además muestra lo que envía la placa
+npm run servidor                       # el servidor real en esta computadora, conectado a Atlas y HiveMQ
 ```
 
 Abra http://localhost:1880/app/ (usuarios `operario` / `operario-dev`, `tecnico` / `tecnico-dev`) y http://localhost:3000 (Grafana, `admin` / `admin`).

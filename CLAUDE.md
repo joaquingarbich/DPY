@@ -35,6 +35,8 @@ npm run dev        # MongoDB en memoria + broker aedes (1883) + Node-RED (1880) 
 npm run simular    # otra terminal: simula el ESP32 (lote L-04, 20 h de datos y luego uno por minuto); --horas N --lote L-05 --fin
 python3 grafana/generar_tableros.py              # regenera dashboards/*.json (no editar los JSON a mano)
 OPERARIO_CLAVE=op-dev-123 TECNICO_CLAVE=tec-dev-123 node grafana/configurar-equipos.js   # usuarios/equipos de Grafana en local
+npm run verificar-nube [-- --escuchar 120]   # con servidor/.env: crea la base en Atlas (prepararBase), prueba HiveMQ, escucha secador/#
+npm run servidor   # Node-RED real con servidor/.env (Atlas + HiveMQ) sin Docker; settings.js arma MQTT_URL desde MQTT_HOST
 ```
 
 URLs locales:
@@ -82,4 +84,5 @@ Los datos de `npm run dev` viven en memoria. Producción usa `docker compose up 
 - `MANUAL_OPERACION.md`: uso diario.
 - `firmware/MANUAL.md`: compilar, cargar y calibrar.
 - `servidor/MANUAL_DESPLIEGUE.md`: cuentas, máquina virtual y Docker.
-- `hardware/conexiones.svg`: diagrama de conexiones.
+- `GUIA_PUESTA_EN_MARCHA.md`: fases de cero a prototipo enviando a Atlas.
+- `hardware/CONEXIONES.md` y `hardware/conexiones.svg`: conexiones, materiales y alimentación. Los pines deben coincidir con `firmware/include/config.h`.

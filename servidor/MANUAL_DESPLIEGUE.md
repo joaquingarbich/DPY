@@ -53,6 +53,16 @@ Las alertas se ven en Grafana → *Alerting → Alert rules*. El envío a Telegr
 
 No hace falta crear colecciones: Node-RED las crea al arrancar.
 
+### 2.2b Comprobar las cuentas y crear la base
+
+Con el `.env` completo, desde `servidor/`:
+
+```
+npm run verificar-nube
+```
+
+Crea la base `secador` en Atlas (si no existe), prueba el broker y dice qué falta. Para empezar a recibir datos del prototipo **sin máquina virtual**, use `npm run servidor`: el mismo Node-RED corriendo en su computadora (ver `GUIA_PUESTA_EN_MARCHA.md`, fase 2).
+
 ### 2.3 Máquina virtual
 
 Cualquier proveedor sirve (Oracle Cloud Free Tier, AWS Lightsail, DigitalOcean, etc.) con **Ubuntu 24.04**, 1 vCPU y 1 GB de RAM.

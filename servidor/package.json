@@ -5,7 +5,9 @@
   "scripts": {
     "test": "node --test",
     "dev": "node dev/levantar.js",
-    "simular": "node dev/simulador.js"
+    "simular": "node dev/simulador.js",
+    "verificar-nube": "node --env-file=.env herramientas/verificar-nube.js",
+    "servidor": "node --env-file=.env node_modules/node-red/red.js --settings nodered/settings.js --userDir .nodered-local"
   },
   "dependencies": {
     "mongodb": "^7.8.0"

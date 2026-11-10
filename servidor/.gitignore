@@ -2,3 +2,4 @@ node_modules/
 dev/.nodered/
 dev/.grafana/
 .env
+.nodered-local/
