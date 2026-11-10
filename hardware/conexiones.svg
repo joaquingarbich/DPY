@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1100" width="1200" height="1100" font-family="Helvetica, Arial, sans-serif" font-size="14">
+  <title>Conexiones del secador solar: ESP32 DevKit V1 y sensores</title>
+  <style>
+    .caja { fill: #ffffff; stroke: #333; stroke-width: 2; rx: 8; }
+    .esp { fill: #1f3b57; stroke: #0d1f30; stroke-width: 2; }
+    .pin { fill: #fff; font-size: 13px; font-weight: bold; }
+    .t { fill: #222; }
+    .s { fill: #555; font-size: 12px; }
+    .tit { fill: #111; font-size: 15px; font-weight: bold; }
+    .sda { stroke: #1565c0; stroke-width: 3; fill: none; }
+    .scl { stroke: #ef6c00; stroke-width: 3; fill: none; }
+    .ow { stroke: #2e7d32; stroke-width: 3; fill: none; }
+    .hx { stroke: #6a1b9a; stroke-width: 3; fill: none; }
+    .spi { stroke: #00838f; stroke-width: 3; fill: none; }
+    .fan { stroke: #c62828; stroke-width: 3; fill: none; }
+    .gnd { stroke: #000; stroke-width: 3; fill: none; }
+    .io { stroke: #546e7a; stroke-width: 3; fill: none; }
+    .nodo { fill: #111; }
+    .seccion { fill: #f5f5f5; stroke: #ddd; stroke-width: 1; rx: 10; }
+  </style>
+  <rect x="0" y="0" width="1200" height="1100" fill="#ffffff"/>
+  <text x="600" y="32" text-anchor="middle" class="tit" font-size="20">Conexiones del secador: ESP32 DevKit V1 (38 pines)</text>
+  <text x="600" y="54" text-anchor="middle" class="s">Todos los sensores se alimentan con 3V3 y GND del ESP32 (salvo el ventilador, 12 V). Todas las tierras (GND) van unidas.</text>
+
+  <!-- Fondos de sección -->
+  <rect class="seccion" x="300" y="150" width="880" height="215"/>
+  <rect class="seccion" x="300" y="380" width="880" height="95"/>
+  <rect class="seccion" x="300" y="490" width="880" height="110"/>
+  <rect class="seccion" x="300" y="615" width="880" height="135"/>
+  <rect class="seccion" x="300" y="765" width="880" height="185"/>
+  <rect class="seccion" x="300" y="965" width="880" height="110"/>
+  <text x="1170" y="170" text-anchor="end" class="s">Bus I2C (100 kHz)</text>
+  <text x="1170" y="400" text-anchor="end" class="s">1-Wire</text>
+  <text x="1170" y="510" text-anchor="end" class="s">Celda de carga</text>
+  <text x="1170" y="635" text-anchor="end" class="s">SPI (VSPI)</text>
+  <text x="1170" y="785" text-anchor="end" class="s">Ventilador 4 hilos, 12 V</text>
+  <text x="1170" y="985" text-anchor="end" class="s">Interfaz</text>
+
+  <!-- ESP32 -->
+  <rect class="esp" x="40" y="80" width="220" height="1000" rx="12"/>
+  <text x="150" y="112" text-anchor="middle" fill="#fff" font-size="18" font-weight="bold">ESP32</text>
+  <text x="150" y="132" text-anchor="middle" fill="#cfd8dc" font-size="12">DevKit V1 · 38 pines</text>
+  <g class="pin" text-anchor="end">
+    <text x="250" y="205">GPIO 21 · SDA</text>
+    <text x="250" y="235">GPIO 22 · SCL</text>
+    <text x="250" y="435">GPIO 4</text>
+    <text x="250" y="535">GPIO 34</text>
+    <text x="250" y="565">GPIO 25</text>
+    <text x="250" y="655">GPIO 5 · CS</text>
+    <text x="250" y="680">GPIO 23 · MOSI</text>
+    <text x="250" y="705">GPIO 19 · MISO</text>
+    <text x="250" y="730">GPIO 18 · SCK</text>
+    <text x="250" y="805">GPIO 26 · PWM</text>
+    <text x="250" y="845">GPIO 35 · TACO</text>
+    <text x="250" y="905">GPIO 27</text>
+    <text x="250" y="1005">GPIO 33</text>
+    <text x="250" y="1050">GPIO 2 · LED</text>
+  </g>
+  <g fill="#cfd8dc" font-size="12" text-anchor="middle">
+    <text x="150" y="300">3V3 → sensores</text>
+    <text x="150" y="318">GND → común</text>
+    <text x="150" y="336">VIN ← 5 V (convertidor)</text>
+    <text x="150" y="380">GPIO 16/17: reservados</text>
+    <text x="150" y="396">módulo celular (UART2)</text>
+  </g>
+
+  <!-- I2C -->
+  <path class="sda" d="M260 200 H1120"/>
+  <path class="scl" d="M260 230 H1120"/>
+  <text x="275" y="192" fill="#1565c0" font-size="12" font-weight="bold">SDA</text>
+  <text x="275" y="250" fill="#ef6c00" font-size="12" font-weight="bold">SCL</text>
+  <!-- pull-ups -->
+  <rect x="318" y="160" width="12" height="28" fill="#fff" stroke="#333"/>
+  <rect x="338" y="160" width="12" height="28" fill="#fff" stroke="#333"/>
+  <path class="sda" d="M324 188 V200"/><path class="scl" d="M344 188 V230"/>
+  <circle class="nodo" cx="324" cy="200" r="4"/><circle class="nodo" cx="344" cy="230" r="4"/>
+  <text x="356" y="172" class="s">2 × 4,7 kΩ a 3V3</text>
+  <text x="356" y="186" class="s">(ver nota: muchos módulos ya los traen)</text>
+
+  <g>
+    <circle class="nodo" cx="440" cy="200" r="4"/><circle class="nodo" cx="470" cy="230" r="4"/>
+    <path class="sda" d="M440 200 V270"/><path class="scl" d="M470 230 V270"/>
+    <rect class="caja" x="390" y="270" width="150" height="85"/>
+    <text x="465" y="292" text-anchor="middle" class="tit">SHT31 entrada</text>
+    <text x="465" y="310" text-anchor="middle" class="s">dirección 0x44</text>
+    <text x="465" y="326" text-anchor="middle" class="s">ADDR → GND</text>
+    <text x="465" y="342" text-anchor="middle" class="s">aire que entra</text>
+
+    <circle class="nodo" cx="620" cy="200" r="4"/><circle class="nodo" cx="650" cy="230" r="4"/>
+    <path class="sda" d="M620 200 V270"/><path class="scl" d="M650 230 V270"/>
+    <rect class="caja" x="570" y="270" width="150" height="85"/>
+    <text x="645" y="292" text-anchor="middle" class="tit">SHT31 cámara</text>
+    <text x="645" y="310" text-anchor="middle" class="s">dirección 0x45</text>
+    <text x="645" y="326" text-anchor="middle" class="s">ADDR → 3V3</text>
+    <text x="645" y="342" text-anchor="middle" class="s">dentro de la cámara</text>
+
+    <circle class="nodo" cx="800" cy="200" r="4"/><circle class="nodo" cx="830" cy="230" r="4"/>
+    <path class="sda" d="M800 200 V270"/><path class="scl" d="M830 230 V270"/>
+    <rect class="caja" x="750" y="270" width="150" height="85"/>
+    <text x="825" y="292" text-anchor="middle" class="tit">BH1750</text>
+    <text x="825" y="310" text-anchor="middle" class="s">dirección 0x23</text>
+    <text x="825" y="326" text-anchor="middle" class="s">ADDR → GND</text>
+    <text x="825" y="342" text-anchor="middle" class="s">con difusor, al sol</text>
+
+    <circle class="nodo" cx="980" cy="200" r="4"/><circle class="nodo" cx="1010" cy="230" r="4"/>
+    <path class="sda" d="M980 200 V270"/><path class="scl" d="M1010 230 V270"/>
+    <rect class="caja" x="930" y="270" width="150" height="85"/>
+    <text x="1005" y="292" text-anchor="middle" class="tit">DS3231 (reloj)</text>
+    <text x="1005" y="310" text-anchor="middle" class="s">dirección 0x68</text>
+    <text x="1005" y="326" text-anchor="middle" class="s">pila CR2032</text>
+    <text x="1005" y="342" text-anchor="middle" class="s">junto a la placa</text>
+  </g>
+
+  <!-- DS18B20 -->
+  <path class="ow" d="M260 430 H600"/>
+  <rect x="330" y="398" width="12" height="28" fill="#fff" stroke="#333"/>
+  <path class="ow" d="M336 426 V430"/><circle class="nodo" cx="336" cy="430" r="4"/>
+  <text x="350" y="410" class="s">4,7 kΩ a 3V3</text>
+  <rect class="caja" x="600" y="395" width="230" height="70"/>
+  <text x="715" y="418" text-anchor="middle" class="tit">DS18B20 (sumergible)</text>
+  <text x="715" y="436" text-anchor="middle" class="s">amarillo = datos · rojo = 3V3 · negro = GND</text>
+  <text x="715" y="453" text-anchor="middle" class="s">salida del colector</text>
+
+  <!-- HX711 -->
+  <path class="hx" d="M260 530 H600"/>
+  <path class="hx" d="M260 560 H600"/>
+  <text x="560" y="524" text-anchor="end" class="s">DOUT (DT)</text>
+  <text x="560" y="554" text-anchor="end" class="s">SCK</text>
+  <rect class="caja" x="600" y="505" width="170" height="80"/>
+  <text x="685" y="528" text-anchor="middle" class="tit">HX711</text>
+  <text x="685" y="546" text-anchor="middle" class="s">VCC → 3V3 · GND</text>
+  <text x="685" y="562" text-anchor="middle" class="s">RATE → GND (10 SPS)</text>
+  <g stroke-width="3">
+    <path d="M770 520 H880" stroke="#d32f2f"/><path d="M770 538 H880" stroke="#000"/>
+    <path d="M770 556 H880" stroke="#9e9e9e"/><path d="M770 574 H880" stroke="#2e7d32"/>
+  </g>
+  <g class="s"><text x="775" y="516">E+</text><text x="775" y="534">E−</text><text x="775" y="552">A−</text><text x="775" y="570">A+</text></g>
+  <rect class="caja" x="880" y="505" width="200" height="80"/>
+  <text x="980" y="528" text-anchor="middle" class="tit">Celda de carga</text>
+  <text x="980" y="546" text-anchor="middle" class="s">rojo E+ · negro E−</text>
+  <text x="980" y="562" text-anchor="middle" class="s">blanco A− · verde A+</text>
+  <text x="980" y="578" text-anchor="middle" class="s">(verificar con su hoja)</text>
+
+  <!-- microSD -->
+  <path class="spi" d="M260 650 H600"/><path class="spi" d="M260 675 H600"/>
+  <path class="spi" d="M260 700 H600"/><path class="spi" d="M260 725 H600"/>
+  <g class="s" text-anchor="end"><text x="590" y="645">CS</text><text x="590" y="670">MOSI (DI)</text><text x="590" y="695">MISO (DO)</text><text x="590" y="720">SCK (CLK)</text></g>
+  <rect class="caja" x="600" y="630" width="230" height="110"/>
+  <text x="715" y="656" text-anchor="middle" class="tit">Módulo microSD</text>
+  <text x="715" y="676" text-anchor="middle" class="s">FAT32</text>
+  <text x="715" y="694" text-anchor="middle" class="s">con regulador: VCC → 5 V</text>
+  <text x="715" y="712" text-anchor="middle" class="s">sin regulador: VCC → 3V3</text>
+
+  <!-- Ventilador -->
+  <path class="fan" d="M260 800 H900"/>
+  <path class="io" d="M260 840 H900"/>
+  <rect x="440" y="808" width="12" height="26" fill="#fff" stroke="#333"/>
+  <circle class="nodo" cx="446" cy="840" r="4"/><path class="io" d="M446 834 V840"/>
+  <text x="460" y="822" class="s">10 kΩ a 3V3 (obligatoria)</text>
+  <path class="io" d="M260 900 H560"/>
+  <rect class="caja" x="560" y="870" width="180" height="70"/>
+  <text x="650" y="893" text-anchor="middle" class="tit">MOSFET canal N</text>
+  <text x="650" y="911" text-anchor="middle" class="s">nivel lógico (AO3400, IRLZ44N)</text>
+  <text x="650" y="927" text-anchor="middle" class="s">G ← 220 Ω · 10 kΩ G→GND</text>
+  <text x="580" y="864" class="s">compuerta</text>
+  <path class="gnd" d="M740 920 H900"/>
+  <text x="750" y="914" class="s">D → GND del ventilador</text>
+  <text x="750" y="955" class="s">S → GND común</text>
+  <path class="fan" d="M860 880 H900" stroke-dasharray="6 4"/>
+  <rect class="caja" x="900" y="780" width="180" height="160"/>
+  <text x="990" y="805" text-anchor="middle" class="tit">Ventilador 80 mm</text>
+  <g class="s"><text x="910" y="804">4 PWM (azul)</text></g>
+  <text x="910" y="845" class="s">3 TACO (verde)</text>
+  <text x="910" y="885" class="s">2 +12 V (amarillo) ← fuente</text>
+  <text x="910" y="925" class="s">1 GND (negro)</text>
+  <text x="300" y="795" class="s" fill="#c62828">PWM 25 kHz</text>
+
+  <!-- Botón y LED -->
+  <path class="io" d="M260 1000 H520"/>
+  <circle cx="540" cy="1000" r="18" fill="#fff" stroke="#333" stroke-width="2"/>
+  <circle cx="540" cy="1000" r="9" fill="#e53935"/>
+  <path class="gnd" d="M558 1000 H620"/>
+  <text x="630" y="996" class="t">Botón de lote → GND</text>
+  <text x="630" y="1013" class="s">pull-up interno del ESP32; no lleva resistencia</text>
+  <path class="io" d="M260 1045 H520"/>
+  <text x="530" y="1050" class="t">LED azul de la placa (no requiere conexión)</text>
+  <text x="530" y="1066" class="s">opcional, LED externo visible: GPIO 2 → 330 Ω → LED → GND</text>
+</svg>

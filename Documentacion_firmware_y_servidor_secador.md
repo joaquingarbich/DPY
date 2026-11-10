@@ -4,6 +4,8 @@ Proyecto: Optimización del secado solar de mango a través de un colector térm
 
 Versión del documento: 1.2 (corresponde al firmware `1.1.0`, la versión usada en los ciclos L-02 y L-03). La 1.2 incorpora las decisiones tomadas al escribir el código; ver §18.
 
+El funcionamiento general y el mapa del repositorio están en `README.md`; el uso diario, en `MANUAL_OPERACION.md`.
+
 Este documento reúne todas las decisiones de diseño del software para que el código completo pueda escribirse después y adjuntarse en el apéndice del informe. Los fragmentos de código del apartado 5.2 salen de aquí. Si se cambia algo en el código, se actualiza primero este documento y luego el informe.
 
 ---
@@ -684,3 +686,5 @@ Decisiones tomadas al escribir el código. Las secciones anteriores ya las inclu
 | 14 | Página de operación `/app/` con usuario `operario`, y endpoint `/api/yo` | Grafana no permite cargar datos; el operario necesita una pantalla simple | §15.5 |
 | 15 | El `eq` del mensaje debe coincidir con el del tópico y tener formato válido; `config_aplicada` y `reanudacion` se validan | Un mensaje no puede hacerse pasar por otro equipo ni escribir valores fuera de rango | §15.3 |
 | 16 | El editor de Node-RED se desactiva si falta su clave | Que un `.env` incompleto no deje el editor abierto en internet | §15.1 |
+| 17 | Un equipo no puede escribir telemetría ni eventos en el lote de otro; el `eq` del lote no se reasigna | Aislamiento entre secadores | §15.3 |
+| 18 | `operario` y `tecnico` usan la misma clave en `/app/` y en Grafana | Una sola clave por persona | §15.4, §15.5 |

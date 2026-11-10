@@ -190,6 +190,7 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
     if (motivo) return rechazar(r, motivo);
     const lote = await d.collection('lotes').findOne({ _id: r.lote });
     if (!lote) return rechazar(r, 'lote inexistente');
+    if (lote.eq && lote.eq !== r.eq) return rechazar(r, 'lote de otro equipo');
 
     const clave = `${r.eq}|${r.lote}|${r.seq}|${r.ts}`;
     const t = Date.now();
@@ -237,6 +238,12 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
     if (motivo) return rechazar(e, `evento: ${motivo}`);
     const ts = e.ts ? new Date(e.ts) : ahora();
     const datos = e.datos || {};
+    if (e.lote) {
+      // Un equipo no puede tocar el lote de otro.
+      // ponytail: los id L-xx son por equipo; con varios secadores conviene prefijar el eq.
+      const dueno = await d.collection('lotes').findOne({ _id: e.lote }, { projection: { eq: 1 } });
+      if (dueno && dueno.eq && dueno.eq !== e.eq) return rechazar(e, 'evento: lote de otro equipo');
+    }
     await d.collection('eventos').insertOne({ eq: e.eq, lote: e.lote, ts, tipo: e.tipo, nivel: e.nivel || 'info', datos, recibido: ahora() });
     if (!e.lote) return { ok: true };
 
@@ -245,14 +252,14 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
     switch (e.tipo) {
       case 'inicio_lote':
         await lotes.updateOne({ _id: e.lote }, {
-          $set: { eq: e.eq, inicio: ts, estado: 'carga', tara_cuentas: datos.tara_cuentas ?? null },
-          $setOnInsert: { x0_lab: false, setpoint: 60, intervalo_s: 60 },
+          $set: { inicio: ts, estado: 'carga', tara_cuentas: datos.tara_cuentas ?? null },
+          $setOnInsert: { eq: e.eq, x0_lab: false, setpoint: 60, intervalo_s: 60 },
         }, { upsert: true });
         break;
       case 'masa_inicial':
         await lotes.updateOne({ _id: e.lote }, {
-          $set: { eq: e.eq, estado: 'operacion', inicio_operacion: ts, m0: datos.m0_g, x0: datos.x0, xf: datos.xf, m_obj: datos.m_obj_g },
-          $setOnInsert: { inicio: ts, x0_lab: false, setpoint: 60, intervalo_s: 60 },
+          $set: { estado: 'operacion', inicio_operacion: ts, m0: datos.m0_g, x0: datos.x0, xf: datos.xf, m_obj: datos.m_obj_g },
+          $setOnInsert: { eq: e.eq, inicio: ts, x0_lab: false, setpoint: 60, intervalo_s: 60 },
         }, { upsert: true });
         break;
       case 'carga_cancelada': await set({ estado: 'cancelado', cierre: ts }); break;

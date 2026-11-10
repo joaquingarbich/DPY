@@ -1,8 +1,8 @@
 // Crea los usuarios y equipos de Grafana y los permisos de las carpetas (§15.4).
 // Grafana no permite aprovisionarlos con archivos, así que se hace por su API.
 // Se puede correr varias veces.
-//   GRAFANA_URL=https://secador.ejemplo.pe GF_ADMIN_CLAVE=... \
-//   OPERARIO_CLAVE=... TECNICO_CLAVE=... node grafana/configurar-equipos.js
+// Usa las mismas claves que la página /app/ (API_OPERARIO_CLAVE y API_TECNICO_CLAVE del .env):
+//   GRAFANA_URL=https://secador.ejemplo.pe node --env-file=.env grafana/configurar-equipos.js
 'use strict';
 const URL_G = process.env.GRAFANA_URL || 'http://localhost:3000';
 const AUTH = 'Basic ' + Buffer.from(`admin:${process.env.GF_ADMIN_CLAVE || 'admin'}`).toString('base64');
@@ -34,8 +34,8 @@ async function equipo(nombre, miembro) {
 }
 
 (async () => {
-  const op = await usuario('operario', process.env.OPERARIO_CLAVE, 'Viewer');
-  const tec = await usuario('tecnico', process.env.TECNICO_CLAVE, 'Editor');
+  const op = await usuario('operario', process.env.OPERARIO_CLAVE || process.env.API_OPERARIO_CLAVE, 'Viewer');
+  const tec = await usuario('tecnico', process.env.TECNICO_CLAVE || process.env.API_TECNICO_CLAVE, 'Editor');
   const eOp = await equipo('operario', op).catch((e) => { if (/already|400/.test(e.message)) return null; throw e; });
   const eTec = await equipo('tecnico', tec).catch((e) => { if (/already|400/.test(e.message)) return null; throw e; });
   const ids = async (n) => (await api('GET', `/api/teams/search?name=${n}`)).teams[0].id;

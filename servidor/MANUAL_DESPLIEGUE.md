@@ -84,21 +84,16 @@ curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER && newgrp docker
 
 # Código
-git clone <url-del-repositorio> secador && cd secador/servidor
-cp .env.ejemplo .env
-nano .env
+git clone https://github.com/joaquingarbich/DPY.git secador && cd secador/servidor
 ```
 
-Complete el `.env` con los datos de la parte 2. Use claves largas y distintas para `API_GRAFANA_CLAVE`, `API_TECNICO_CLAVE` y `GF_ADMIN_CLAVE`.
+**El `.env`:** el responsable del proyecto ya tiene uno con todas las claves propias generadas (API, Grafana, editor de Node-RED, MQTT, Atlas). Cópielo a la máquina, por ejemplo con `scp servidor/.env usuario@<ip>:secador/servidor/`, y complete lo que falta:
+- `DOMINIO`.
+- El host del clúster en `MONGODB_URI`. Al crear el usuario `secador` en Atlas, use la clave que ya está en la URI.
+- `MQTT_HOST`. Al crear los usuarios `sec-01` y `servidor` en HiveMQ, use las claves que ya tienen: la de `servidor` está en `MQTT_CLAVE`, y la de `sec-01` en `firmware/include/secretos.h`.
+- Los tres datos de Telegram.
 
-Para proteger el editor de Node-RED:
-
-```
-docker compose build nodered
-docker compose run --rm nodered npx node-red admin hash-pw
-```
-
-Pegue el resultado en `NODE_RED_EDITOR_HASH`, escribiendo **cada `$` como `$$`**.
+Si no tiene ese `.env`, parta de la plantilla (`cp .env.ejemplo .env`) y ponga claves largas y distintas. Para el hash del editor de Node-RED, use `docker compose build nodered && docker compose run --rm nodered npx node-red admin hash-pw` y pegue el resultado en `NODE_RED_EDITOR_HASH`, escribiendo **cada `$` como `$$`**.
 
 Levante todo:
 
@@ -113,12 +108,10 @@ Desde su computadora (necesita Node.js):
 
 ```
 cd servidor
-GRAFANA_URL=https://secador.su-dominio.pe GF_ADMIN_CLAVE=<la del .env> \
-OPERARIO_CLAVE=<clave del operario> TECNICO_CLAVE=<clave del técnico> \
-node grafana/configurar-equipos.js
+GRAFANA_URL=https://secador.su-dominio.pe node --env-file=.env grafana/configurar-equipos.js
 ```
 
-Crea los usuarios `operario` (solo ve su tablero) y `tecnico` (ve y edita los dos). Se puede correr de nuevo para cambiar las claves.
+Crea en Grafana los usuarios `operario` (solo ve su tablero) y `tecnico` (ve y edita los dos), **con las mismas claves que la página `/app/`** (`API_OPERARIO_CLAVE` y `API_TECNICO_CLAVE` del `.env`). Así cada persona tiene una sola clave. Se puede correr de nuevo después de cambiar las claves.
 
 ---
 

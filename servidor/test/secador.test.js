@@ -121,6 +121,14 @@ test('flujo completo contra MongoDB', async (t) => {
     assert.equal(await db.collection('mediciones').countDocuments(), 1);
   });
 
+  await t.test('otro equipo no puede escribir en el lote', async () => {
+    const r = await srv.ingresarTelemetria(registro({ eq: 'SEC-02', seq: 99 }), 'secador/SEC-02/telemetria');
+    assert.equal(r.motivo, 'lote de otro equipo');
+    const e = await srv.ingresarEvento(evento('cierre_lote', {}, { eq: 'SEC-02' }), 'secador/SEC-02/evento');
+    assert.equal(e.ok, false);
+    assert.equal((await db.collection('lotes').findOne({ _id: 'L-04' })).estado, 'operacion');
+  });
+
   await t.test('ts null: hora del servidor marcada', async () => {
     const r = await srv.ingresarTelemetria(registro({ seq: 2, ts: null }));
     assert.equal(r.doc.ts_servidor, true);
@@ -219,7 +227,7 @@ test('flujo completo contra MongoDB', async (t) => {
     assert.equal(typeof e[0].datos, 'string');
     assert.equal((await srv.http('GET /api/eventos', { headers: GRA, query: { eq: 'SEC-01', limite: '2' } })).body.length, 2);
     const r = (await srv.http('GET /api/rechazados', { headers: GRA, query: {} })).body;
-    assert.equal(r[0].motivo, 'lote inexistente');
+    assert.ok(r.some((x) => x.motivo === 'lote inexistente'));
     const csv = await srv.http('GET /api/export.csv', { headers: GRA, query: { lote: 'L-04' } });
     assert.match(csv.headers['content-type'], /text\/csv/);
     const lineas = csv.body.trim().split('\n');
