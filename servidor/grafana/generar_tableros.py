@@ -32,14 +32,20 @@ def tablero(uid, titulo, paneles, variables, refresco="1m", desde="now-24h"):
             "templating": {"list": variables}, "panels": paneles}
 
 def stat(unidad=None, decimales=None, mapeos=None, color="value", texto=None):
-    d = {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": None}]}}
+    d = {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": None}]},
+         "noValue": "—"}
     if unidad: d["unit"] = unidad
     if decimales is not None: d["decimals"] = decimales
     if mapeos: d["mappings"] = mapeos
     return {"fieldConfig": {"defaults": d, "overrides": []},
-            "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
+            # fields "/.*/": también muestra campos de texto (estado, lote)
+            "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "/.*/", "values": False},
                         "colorMode": color, "graphMode": "none", "textMode": texto or "value_and_name", "justifyMode": "center",
                         "orientation": "horizontal"}}
+
+def orden(*cols):
+    """Infinity entrega las columnas en orden alfabético: las reordena."""
+    return {"id": "organize", "options": {"indexByName": {c: i for i, c in enumerate(cols)}}}
 
 ESTADOS = {
     "operacion": ("Secando", "green"), "pausa": ("En pausa (sin sol)", "blue"), "fin_ciclo": ("FIN: retire la bandeja", "orange"),
@@ -61,23 +67,32 @@ op = [
                        "overrides": []},
           options={"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False}, "showThresholdMarkers": True}),
     panel(3, "Masa", "stat", 12, 5, 12, 4, consulta(ULTIMO, [("masa_g", "Actual", "number"), ("m_obj", "Objetivo", "number")]),
-          **stat("massg", 0)),
+          **stat("suffix: g", 0)),
     panel(4, "Temperatura de la cámara", "stat", 12, 9, 12, 4, consulta(ULTIMO, [("t_cam", "Cámara", "number"), ("setpoint", "Setpoint", "number")]),
           **stat("celsius", 1)),
-    panel(5, "Tiempo de secado", "stat", 0, 13, 12, 4, consulta(ULTIMO, [("horas_lote", "Horas", "number")]), **stat("h", 1, texto="value")),
+    panel(5, "Tiempo de secado", "stat", 0, 13, 12, 4, consulta(ULTIMO, [("horas_lote", "Horas", "number")]), **stat("suffix: h", 1, texto="value")),
     panel(6, "Lote", "stat", 12, 13, 12, 4, consulta(ULTIMO, [("lote", "Lote", "string")]), **stat(texto="value")),
     panel(7, "Últimos eventos", "table", 0, 17, 24, 8,
           consulta("/api/eventos?eq=$eq&limite=5", [("ts", "Hora", "timestamp"), ("tipo", "Evento", "string"), ("lote", "Lote", "string")]),
-          options={"showHeader": True}),
+          options={"showHeader": True}, transformations=[orden("Hora", "Evento", "Lote")]),
 ]
 operario = tablero("secador-operario", "Secador - Operario", op, [VAR_EQ], refresco="1m")
 
 # ---------------------------------------------------------------- técnico
 def ts(id, titulo, x, y, campos, unidad, w=12, h=8, **extra):
-    fc = {"defaults": {"unit": unidad, "custom": {"lineWidth": 1, "spanNulls": False}}, "overrides": []}
-    fc.update(extra.pop("fieldConfig", {}))
+    # Color fijo por serie: con Infinity, el color por posición repite el verde.
+    colores = [{"matcher": {"id": "byName", "options": n}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": c}}]}
+               for (_, n), c in zip(campos, COLORES)]
+    fc = {"defaults": {"unit": unidad, "custom": {"lineWidth": 2, "spanNulls": False}}, "overrides": colores}
+    fc["overrides"] += extra.pop("fieldConfig", {}).get("overrides", [])
     return panel(id, titulo, "timeseries", x, y, w, h, serie(campos), fieldConfig=fc,
                  options={"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}, **extra)
+
+COLORES = ["green", "orange", "yellow", "blue", "purple", "red"]
+
+def barras(campo):
+    return {"matcher": {"id": "byName", "options": campo},
+            "properties": [{"id": "custom.drawStyle", "value": "bars"}, {"id": "custom.fillOpacity", "value": 60}]}
 
 def eje_derecho(campo, unidad):
     return {"matcher": {"id": "byName", "options": campo},
@@ -92,11 +107,13 @@ tec = [
        fieldConfig={"overrides": [eje_derecho("Duty (%)", "percent")]}),
     ts(6, "Eficiencia del colector", 12, 16, [("eta", "η")], "percentunit"),
     ts(7, "Calidad de datos", 0, 24, [("n_descartes", "Descartes"), ("senal_dbm", "Señal (dBm)")], "none",
-       fieldConfig={"overrides": [eje_derecho("Señal (dBm)", "dBm")]}),
+       fieldConfig={"overrides": [eje_derecho("Señal (dBm)", "dBm"), barras("Descartes")]}),
     panel(8, "Registros rechazados", "table", 12, 24, 12, 8,
-          consulta("/api/rechazados?desde=${__from}&hasta=${__to}", [("recibido", "Recibido", "timestamp"), ("motivo", "Motivo", "string")])),
+          consulta("/api/rechazados?desde=${__from}&hasta=${__to}", [("recibido", "Recibido", "timestamp"), ("motivo", "Motivo", "string")]),
+          transformations=[orden("Recibido", "Motivo")]),
     panel(9, "Eventos del lote", "table", 0, 32, 24, 9,
-          consulta("/api/eventos?lote=$lote", [("ts", "Hora", "timestamp"), ("tipo", "Evento", "string"), ("nivel", "Nivel", "string"), ("datos", "Datos", "string")])),
+          consulta("/api/eventos?lote=$lote", [("ts", "Hora", "timestamp"), ("tipo", "Evento", "string"), ("nivel", "Nivel", "string"), ("datos", "Datos", "string")]),
+          transformations=[orden("Hora", "Evento", "Nivel", "Datos")]),
     {"id": 10, "title": "Exportar", "type": "text", "gridPos": {"x": 0, "y": 41, "w": 24, "h": 3},
      "options": {"mode": "markdown", "content": "[Descargar CSV del lote $lote](/api/export.csv?lote=$lote) · Requiere el usuario `tecnico` de la API.\n\nLa eficiencia usa la curva de caudal de la colección `calibracion`; mientras esté marcada como provisional, η no vale para el informe."}},
 ]

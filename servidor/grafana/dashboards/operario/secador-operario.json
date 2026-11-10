@@ -111,6 +111,7 @@
               }
             ]
           },
+          "noValue": "—",
           "mappings": [
             {
               "type": "value",
@@ -171,7 +172,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/.*/",
           "values": false
         },
         "colorMode": "background",
@@ -317,7 +318,8 @@
               }
             ]
           },
-          "unit": "massg",
+          "noValue": "—",
+          "unit": "suffix: g",
           "decimals": 0
         },
         "overrides": []
@@ -327,7 +329,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/.*/",
           "values": false
         },
         "colorMode": "value",
@@ -396,6 +398,7 @@
               }
             ]
           },
+          "noValue": "—",
           "unit": "celsius",
           "decimals": 1
         },
@@ -406,7 +409,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/.*/",
           "values": false
         },
         "colorMode": "value",
@@ -470,7 +473,8 @@
               }
             ]
           },
-          "unit": "h",
+          "noValue": "—",
+          "unit": "suffix: h",
           "decimals": 1
         },
         "overrides": []
@@ -480,7 +484,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/.*/",
           "values": false
         },
         "colorMode": "value",
@@ -543,7 +547,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "noValue": "—"
         },
         "overrides": []
       },
@@ -552,7 +557,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/.*/",
           "values": false
         },
         "colorMode": "value",
@@ -614,7 +619,19 @@
       ],
       "options": {
         "showHeader": true
-      }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "Hora": 0,
+              "Evento": 1,
+              "Lote": 2
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secador solar</title>
+<style>
+  :root {
+    --fondo: #f4f2ee; --tarjeta: #ffffff; --texto: #1d1d1b; --suave: #6b6a65; --borde: #e2dfd8;
+    --acento: #c2620a; --ok: #2f7d32; --pausa: #33658a; --alerta: #c2620a; --peligro: #b3261e; --neutro: #77746c;
+    --sombra: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fondo: #151513; --tarjeta: #1f1f1c; --texto: #f1efe9; --suave: #a3a097; --borde: #33322e;
+      --acento: #f0923a; --ok: #4caf50; --pausa: #5b9bd5; --alerta: #f0923a; --peligro: #ef5350; --neutro: #8f8c84;
+      --sombra: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 18px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 12px; color: var(--suave); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .barra .espacio { flex: 1; }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 16px; box-shadow: var(--sombra); margin-bottom: 14px; }
+  .oculto { display: none !important; }
+  button, select, input { font: inherit; color: inherit; }
+  button { background: var(--acento); color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
+  button.secundario { background: transparent; color: var(--texto); border: 1px solid var(--borde); }
+  button:disabled { opacity: .5; cursor: default; }
+  select, input { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 9px 12px; min-width: 0; }
+  label { display: block; font-size: 14px; color: var(--suave); margin-bottom: 4px; }
+  .pestanas { display: flex; gap: 4px; background: var(--borde); padding: 4px; border-radius: 12px; margin-bottom: 16px; }
+  .pestanas button { flex: 1; background: transparent; color: var(--texto); font-weight: 500; }
+  .pestanas button.activa { background: var(--tarjeta); font-weight: 700; box-shadow: var(--sombra); }
+
+  /* Estado */
+  .estado { border-radius: 16px; padding: 22px 20px; color: #fff; margin-bottom: 14px; }
+  .estado .titulo { font-size: clamp(30px, 8vw, 44px); font-weight: 800; line-height: 1.1; }
+  .estado .detalle { font-size: 18px; margin-top: 8px; opacity: .95; }
+  .e-ok { background: var(--ok); } .e-pausa { background: var(--pausa); } .e-alerta { background: var(--alerta); }
+  .e-peligro { background: var(--peligro); } .e-neutro { background: var(--neutro); }
+  .e-alerta .titulo, .e-peligro .titulo { animation: latido 1.6s ease-in-out infinite; }
+  @keyframes latido { 50% { opacity: .6; } }
+  @media (prefers-reduced-motion: reduce) { .e-alerta .titulo, .e-peligro .titulo { animation: none; } }
+
+  .avance-num { font-size: 48px; font-weight: 800; line-height: 1; }
+  .progreso { height: 14px; background: var(--borde); border-radius: 99px; overflow: hidden; margin: 12px 0 8px; }
+  .progreso div { height: 100%; background: var(--acento); border-radius: 99px; transition: width .6s; }
+  .rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 560px) { .rejilla { grid-template-columns: 1fr 1fr; } .rejilla .ancho-movil { grid-column: span 2; } }
+  .dato .valor { font-size: 28px; font-weight: 700; }
+  .dato .valor small { font-size: 16px; font-weight: 500; color: var(--suave); }
+  .dato .sub { font-size: 14px; color: var(--suave); }
+  .suave { color: var(--suave); font-size: 14px; }
+  ul.eventos { list-style: none; padding: 0; margin: 0; }
+  ul.eventos li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--borde); }
+  ul.eventos li:first-child { border-top: 0; }
+  details summary { cursor: pointer; font-weight: 600; }
+  ol.pasos { padding-left: 20px; margin: 12px 0 0; } ol.pasos li { margin-bottom: 8px; }
+
+  /* Acciones */
+  .fila { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .fila > div { flex: 1; min-width: 140px; }
+  .fila input, .fila select { width: 100%; }
+  table.resumen { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table.resumen td { padding: 6px 0; border-top: 1px solid var(--borde); }
+  table.resumen td:last-child { text-align: right; font-weight: 600; }
+  .msj { margin-top: 10px; font-size: 14px; }
+  .msj.bien { color: var(--ok); } .msj.mal { color: var(--peligro); }
+  .login { max-width: 360px; margin: 12vh auto 0; }
+  .login input { width: 100%; margin-bottom: 12px; }
+  .login button { width: 100%; }
+</style>
+</head>
+<body>
+<main>
+  <!-- Ingreso -->
+  <section id="v-login" class="login tarjeta">
+    <h1 style="margin-bottom:16px">Secador solar</h1>
+    <form id="f-login">
+      <label for="usuario">Usuario</label>
+      <input id="usuario" autocomplete="username" required value="operario">
+      <label for="clave">Clave</label>
+      <input id="clave" type="password" autocomplete="current-password" required>
+      <button type="submit">Entrar</button>
+      <div id="login-msj" class="msj mal"></div>
+    </form>
+  </section>
+
+  <section id="v-app" class="oculto">
+    <div class="barra">
+      <h1>Secador solar</h1>
+      <select id="sel-eq" aria-label="Equipo"></select>
+      <span class="espacio"></span>
+      <span class="suave" id="quien"></span>
+      <button class="secundario" id="b-salir">Salir</button>
+    </div>
+
+    <div class="pestanas oculto" id="pestanas" role="tablist">
+      <button class="activa" data-vista="secador" role="tab">Secador</button>
+      <button data-vista="acciones" role="tab">Acciones del técnico</button>
+    </div>
+
+    <!-- Vista del operario -->
+    <div id="v-secador">
+      <div id="estado" class="estado e-neutro"><div class="titulo">Cargando…</div><div class="detalle"></div></div>
+
+      <div class="tarjeta" id="t-avance">
+        <h2>Avance del secado</h2>
+        <div class="avance-num" id="avance">—</div>
+        <div class="progreso"><div id="avance-barra" style="width:0"></div></div>
+        <div class="suave" id="avance-texto"></div>
+      </div>
+
+      <div class="rejilla">
+        <div class="tarjeta dato"><h2>Cámara</h2><div class="valor" id="t-cam">—</div><div class="sub" id="sp"></div></div>
+        <div class="tarjeta dato"><h2>Secando hace</h2><div class="valor" id="horas">—</div><div class="sub" id="inicio"></div></div>
+        <div class="tarjeta dato ancho-movil"><h2>Lote</h2><div class="valor" id="lote">—</div><div class="sub" id="masa"></div></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Últimos eventos</h2>
+        <ul class="eventos" id="eventos"><li class="suave">—</li></ul>
+      </div>
+
+      <div class="tarjeta">
+        <details id="ayuda">
+          <summary>Cómo iniciar y cerrar un lote</summary>
+          <ol class="pasos">
+            <li><b>Tara:</b> con la bandeja <b>vacía</b> y quieta, pulse el botón del secador una vez (corto). El LED parpadea lento.</li>
+            <li><b>Carga:</b> ponga el mango, espere unos 30 s sin tocar la bandeja y <b>mantenga el botón presionado 3 s</b> hasta que el LED quede fijo. Empieza el secado.</li>
+            <li><b>Fin:</b> cuando esta pantalla diga <b>“FIN: retire la bandeja”</b> (también llega un aviso por Telegram), retire la bandeja.</li>
+            <li><b>Cierre:</b> mantenga el botón presionado 3 s. El lote queda cerrado.</li>
+          </ol>
+          <p class="suave">Si la pulsación no hace nada, la bandeja no estaba quieta: espere y repita. Para cerrar antes de tiempo: dos pulsaciones largas seguidas.</p>
+        </details>
+      </div>
+      <p class="suave" id="actualizado"></p>
+    </div>
+
+    <!-- Acciones del técnico -->
+    <div id="v-acciones" class="oculto">
+      <div class="tarjeta">
+        <h2>Lote</h2>
+        <select id="sel-lote" aria-label="Lote" style="width:100%;margin-bottom:12px"></select>
+        <table class="resumen" id="resumen"></table>
+      </div>
+
+      <form class="tarjeta" id="f-x0">
+        <h2>Humedad inicial (laboratorio)</h2>
+        <p class="suave" style="margin-top:0">Cargarla cuando llegue la gravimetría (unas 7 h después del inicio). Con este dato se recalcula la masa objetivo y el equipo deja de esperar las 12 h de seguridad.</p>
+        <div class="fila">
+          <div><label for="x0">Humedad base húmeda (%)</label><input id="x0" type="number" step="0.01" min="70" max="90" required placeholder="82.81"></div>
+          <button type="submit">Guardar y enviar</button>
+        </div>
+        <div class="msj" id="m-x0"></div>
+      </form>
+
+      <form class="tarjeta" id="f-cfg">
+        <h2>Parámetros del equipo</h2>
+        <div class="fila">
+          <div><label for="sp-in">Setpoint de la cámara (°C)</label><input id="sp-in" type="number" step="0.5" min="45" max="65" required></div>
+          <div><label for="int-in">Intervalo de registro</label>
+            <select id="int-in"><option value="60">1 min</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option></select></div>
+          <button type="submit">Enviar al equipo</button>
+        </div>
+        <div class="msj" id="m-cfg"></div>
+      </form>
+
+      <form class="tarjeta" id="f-xf">
+        <h2>Humedad final medida</h2>
+        <p class="suave" style="margin-top:0">Gravimetría del producto seco, para el informe. No cambia nada en el equipo.</p>
+        <div class="fila">
+          <div><label for="xf">Humedad base húmeda (%)</label><input id="xf" type="number" step="0.01" min="1" max="99" required placeholder="16.8"></div>
+          <button type="submit">Guardar</button>
+        </div>
+        <div class="msj" id="m-xf"></div>
+      </form>
+
+      <div class="tarjeta">
+        <h2>Datos</h2>
+        <button id="b-csv">Descargar CSV del lote</button>
+        <div class="msj" id="m-csv"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const guardar = (k, v) => { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} };
+const leer = (k) => { try { return sessionStorage.getItem(k); } catch { return null; } };
+
+let auth = leer('auth'), rol = null, eq = null, ultimo = null, timer = null;
+
+async function api(ruta, opciones = {}) {
+  const r = await fetch('/api' + ruta, {
+    ...opciones,
+    headers: { authorization: 'Basic ' + auth, 'x-requested-with': 'secador-app', 'content-type': 'application/json', ...(opciones.headers || {}) },
+  });
+  if (r.status === 401) { salir('La sesión expiró: ingrese de nuevo.'); throw new Error('401'); }
+  const tipo = r.headers.get('content-type') || '';
+  const cuerpo = tipo.includes('json') ? await r.json() : await r.blob();
+  if (!r.ok) throw new Error((cuerpo && cuerpo.error) || `error ${r.status}`);
+  return cuerpo;
+}
+
+// ---------------------------------------------------------------- ingreso
+$('f-login').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  auth = btoa(unescape(encodeURIComponent($('usuario').value.trim() + ':' + $('clave').value)));
+  try { await entrar(); } catch (err) { $('login-msj').textContent = err.message === '401' ? 'Usuario o clave incorrectos.' : 'No se pudo conectar con el servidor.'; }
+});
+
+async function entrar() {
+  rol = (await api('/yo')).rol;
+  guardar('auth', auth);
+  $('v-login').classList.add('oculto');
+  $('v-app').classList.remove('oculto');
+  $('quien').textContent = rol === 'tecnico' ? 'Técnico' : 'Operario';
+  $('pestanas').classList.toggle('oculto', rol !== 'tecnico');
+  await cargarEquipos();
+  refrescar();
+  clearInterval(timer);
+  timer = setInterval(refrescar, 30000);
+}
+
+function salir(msj) {
+  auth = null; guardar('auth', null); clearInterval(timer);
+  $('v-app').classList.add('oculto'); $('v-login').classList.remove('oculto');
+  $('clave').value = ''; $('login-msj').textContent = msj || '';
+}
+$('b-salir').addEventListener('click', () => salir());
+
+// ---------------------------------------------------------------- equipos y pestañas
+async function cargarEquipos() {
+  const filas = await api('/ultimo');
+  const sel = $('sel-eq');
+  sel.innerHTML = '';
+  for (const f of filas) sel.append(new Option(f.eq, f.eq));
+  if (!filas.length) sel.append(new Option('SEC-01', 'SEC-01'));
+  eq = leer('eq') && [...sel.options].some((o) => o.value === leer('eq')) ? leer('eq') : sel.options[0].value;
+  sel.value = eq;
+  sel.classList.toggle('oculto', sel.options.length < 2);
+}
+$('sel-eq').addEventListener('change', (e) => { eq = e.target.value; guardar('eq', eq); refrescar(); });
+
+for (const b of document.querySelectorAll('#pestanas button')) {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#pestanas button').forEach((x) => x.classList.toggle('activa', x === b));
+    $('v-secador').classList.toggle('oculto', b.dataset.vista !== 'secador');
+    $('v-acciones').classList.toggle('oculto', b.dataset.vista !== 'acciones');
+    if (b.dataset.vista === 'acciones') cargarLotes();
+  });
+}
+
+// ---------------------------------------------------------------- vista del operario
+const ESTADOS = {
+  operacion:    ['e-ok', 'Secando', 'Todo en orden. No hace falta hacer nada.'],
+  pausa:        ['e-pausa', 'En pausa', 'No hay sol: el ventilador está apagado hasta que vuelva la radiación.'],
+  fin_ciclo:    ['e-alerta', 'FIN: retire la bandeja', 'El mango llegó a la humedad final. Retire la bandeja y mantenga el botón presionado 3 s para cerrar el lote.'],
+  modo_seguro:  ['e-peligro', 'Avise al técnico', 'Falla el sensor de la cámara. El ventilador está al máximo para proteger el producto.'],
+  sin_conexion: ['e-peligro', 'Sin conexión', 'El secador no envía datos. Revise que tenga energía y WiFi.'],
+  carga:        ['e-neutro', 'Cargando la bandeja', 'Ponga el mango, espere 30 s y mantenga el botón presionado 3 s.'],
+  cerrado:      ['e-neutro', 'Sin lote en curso', 'El último lote está cerrado. Para empezar otro, vea “Cómo iniciar y cerrar un lote”.'],
+  cancelado:    ['e-neutro', 'Sin lote en curso', 'La carga se canceló. Para empezar otro, vea “Cómo iniciar y cerrar un lote”.'],
+  sin_lote:     ['e-neutro', 'Sin lote en curso', 'Para empezar, vea “Cómo iniciar y cerrar un lote”.'],
+};
+const EVENTOS = {
+  inicio_lote: 'Lote iniciado (tara)', masa_inicial: 'Carga confirmada', carga_cancelada: 'Carga cancelada',
+  cierre_lote: 'Lote cerrado', fin_ciclo: 'Fin de ciclo', modo_seguro: 'Modo seguro', fin_modo_seguro: 'Fin del modo seguro',
+  pausa_inicio: 'Pausa (sin sol)', pausa_fin: 'Fin de la pausa', error_sensor: 'Error de sensor', falla_ventilador: 'Falla del ventilador',
+  error_sd: 'Error de la microSD', config_aplicada: 'Configuración aplicada', config_rechazada: 'Configuración rechazada',
+  reanudacion: 'Reinicio del equipo', sin_datos: 'Sin datos',
+};
+const num = (v, d = 0) => (v === null || v === undefined ? '—' : Number(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const hora = (ts) => new Date(ts).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+async function refrescar() {
+  if (!auth) return;
+  try {
+    const [u] = await api('/ultimo?eq=' + encodeURIComponent(eq));
+    ultimo = u || null;
+    pintar(u);
+    const ev = await api(`/eventos?eq=${encodeURIComponent(eq)}&limite=6`);
+    const ul = $('eventos');
+    ul.innerHTML = '';
+    for (const e of ev) {
+      const li = document.createElement('li');
+      const a = document.createElement('span'); a.textContent = EVENTOS[e.tipo] || e.tipo;
+      if (e.nivel === 'critico') a.style.fontWeight = '700';
+      const b = document.createElement('span'); b.className = 'suave'; b.textContent = hora(e.ts);
+      li.append(a, b); ul.append(li);
+    }
+    if (!ev.length) ul.innerHTML = '<li class="suave">Sin eventos todavía.</li>';
+    $('actualizado').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-PE') + ' · se actualiza cada 30 s';
+  } catch (err) {
+    if (err.message !== '401') $('actualizado').textContent = 'No se pudo actualizar: ' + err.message;
+  }
+}
+
+function pintar(u) {
+  const clave = u ? u.estado_panel : 'sin_lote';
+  const [clase, titulo, detalle] = ESTADOS[clave] || ['e-neutro', clave, ''];
+  $('estado').className = 'estado ' + clase;
+  $('estado').querySelector('.titulo').textContent = titulo;
+  $('estado').querySelector('.detalle').textContent = clave === 'sin_conexion' && u.min_sin_datos
+    ? `${detalle} Último dato hace ${num(u.min_sin_datos)} min.` : detalle;
+
+  const activo = u && u.lote_activo;
+  $('t-avance').classList.toggle('oculto', !activo);
+  if (activo) {
+    const a = u.avance;
+    $('avance').textContent = a === null ? '—' : num(Math.max(0, Math.min(a, 1)) * 100) + ' %';
+    $('avance-barra').style.width = a === null ? '0' : Math.max(0, Math.min(a, 1)) * 100 + '%';
+    $('avance-texto').textContent = a === null
+      ? 'El avance aparece cuando el técnico carga la humedad de laboratorio.'
+      : `Masa ${num(u.masa_g)} g · objetivo ${num(u.m_obj)} g`;
+  }
+  $('t-cam').innerHTML = u && u.t_cam !== undefined && u.t_cam !== null ? `${num(u.t_cam, 1)} <small>°C</small>` : '—';
+  $('sp').textContent = u && u.setpoint ? `Objetivo ${num(u.setpoint, 0)} °C` : '';
+  $('horas').innerHTML = activo && u.horas_lote !== null ? `${num(u.horas_lote, 1)} <small>h</small>` : '—';
+  $('inicio').textContent = activo && u.inicio_operacion ? 'Desde ' + hora(u.inicio_operacion) : '';
+  $('lote').textContent = u && u.lote ? u.lote : '—';
+  $('masa').textContent = activo && u.masa_g !== undefined && u.masa_g !== null ? `Masa ${num(u.masa_g)} g` : '';
+  $('ayuda').open = !activo;
+}
+
+// ---------------------------------------------------------------- acciones del técnico
+let lotes = [];
+const NOMBRE_ESTADO = { carga: 'cargando', operacion: 'secando', fin_ciclo: 'fin de ciclo', modo_seguro: 'modo seguro', cerrado: 'cerrado', cancelado: 'cancelado' };
+const nombreEstado = (e) => NOMBRE_ESTADO[e] || e;
+async function cargarLotes() {
+  lotes = await api('/lotes?eq=' + encodeURIComponent(eq));
+  const sel = $('sel-lote');
+  const previo = sel.value;
+  sel.innerHTML = '';
+  for (const l of lotes) sel.append(new Option(`${l.id} · ${nombreEstado(l.estado)}`, l.id));
+  if (!lotes.length) sel.append(new Option('No hay lotes', ''));
+  sel.value = lotes.some((l) => l.id === previo) ? previo : (lotes[0] ? lotes[0].id : '');
+  mostrarLote();
+}
+$('sel-lote').addEventListener('change', mostrarLote);
+
+function loteSel() { return lotes.find((l) => l.id === $('sel-lote').value); }
+
+function mostrarLote() {
+  const l = loteSel();
+  const filas = l ? [
+    ['Estado', nombreEstado(l.estado)],
+    ['Inicio', l.inicio_operacion ? hora(l.inicio_operacion) : '—'],
+    ['Masa inicial', l.m0 ? num(l.m0) + ' g' : '—'],
+    ['Humedad inicial', l.x0 ? num(l.x0 * 100, 2) + ' %' + (l.x0_lab ? ' (laboratorio)' : ' (provisional)') : '—'],
+    ['Humedad final objetivo', l.xf ? num(l.xf * 100, 1) + ' %' : '—'],
+    ['Masa objetivo', l.m_obj ? num(l.m_obj) + ' g' : '—'],
+    ['Setpoint', l.setpoint ? num(l.setpoint, 1) + ' °C' : '—'],
+    ['Intervalo', l.intervalo_s ? l.intervalo_s / 60 + ' min' : '—'],
+    ['Humedad final medida', l.gravimetria_final ? num(l.gravimetria_final.xf_medida * 100, 2) + ' %' : '—'],
+  ] : [];
+  const t = $('resumen'); t.innerHTML = '';
+  for (const [k, v] of filas) { const tr = t.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
+  if (l) { $('sp-in').value = l.setpoint ?? 60; $('int-in').value = String(l.intervalo_s ?? 60); }
+  for (const f of ['f-x0', 'f-cfg', 'f-xf']) $(f).querySelector('button').disabled = !l;
+  $('b-csv').disabled = !l;
+}
+
+function mensaje(id, texto, bien) { const m = $(id); m.textContent = texto; m.className = 'msj ' + (bien ? 'bien' : 'mal'); }
+
+async function enviar(form, idMsj, ruta, cuerpo, textoOk) {
+  const b = $(form).querySelector('button');
+  b.disabled = true;
+  try {
+    await api(ruta, { method: 'POST', body: JSON.stringify(cuerpo) });
+    mensaje(idMsj, textoOk, true);
+    await cargarLotes();
+  } catch (err) {
+    if (err.message !== '401') mensaje(idMsj, 'No se guardó: ' + err.message, false);
+  } finally { b.disabled = false; }
+}
+
+$('f-x0').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const l = loteSel(), v = Number($('x0').value);
+  if (!confirm(`¿Guardar humedad inicial de ${v} % para ${l.id}? Se enviará al secador.`)) return;
+  enviar('f-x0', 'm-x0', `/lotes/${encodeURIComponent(l.id)}/gravimetria/inicial`, { x0: Math.round(v * 100) / 10000 },
+    'Guardado y enviado. El secador confirmará con “Configuración aplicada” en los eventos.');
+});
+$('f-cfg').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const l = loteSel();
+  enviar('f-cfg', 'm-cfg', `/lotes/${encodeURIComponent(l.id)}/config`,
+    { setpoint: Number($('sp-in').value), intervalo_s: Number($('int-in').value) },
+    'Enviado. Si el secador está sin red, lo recibe al reconectarse.');
+});
+$('f-xf').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const l = loteSel(), v = Number($('xf').value);
+  enviar('f-xf', 'm-xf', `/lotes/${encodeURIComponent(l.id)}/gravimetria/final`, { xf_medida: Math.round(v * 100) / 10000 }, 'Guardado.');
+});
+$('b-csv').addEventListener('click', async () => {
+  const l = loteSel();
+  try {
+    const blob = await api('/export.csv?lote=' + encodeURIComponent(l.id));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = l.id + '.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    mensaje('m-csv', `Descargado ${l.id}.csv`, true);
+  } catch (err) { if (err.message !== '401') mensaje('m-csv', 'No se pudo descargar: ' + err.message, false); }
+});
+
+if (auth) entrar().catch(() => salir());
+</script>
+</body>
+</html>

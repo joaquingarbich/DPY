@@ -44,5 +44,10 @@ async function equipo(nombre, miembro) {
   // Reemplaza los permisos por defecto: el operario solo ve su tablero.
   await api('POST', '/api/folders/operario/permissions', { items: [{ teamId: tOp, permission: 1 }, { teamId: tTec, permission: 1 }] });
   await api('POST', '/api/folders/tecnico/permissions', { items: [{ teamId: tTec, permission: 2 }] });
-  console.log('listo: usuarios operario (Viewer) y tecnico (Editor), equipos y permisos de carpetas');
+
+  // Al entrar, cada uno cae directo en su tablero (no en la página de inicio de Grafana).
+  await api('PUT', '/api/org/preferences', { homeDashboardUID: 'secador-tecnico' });
+  await api('PUT', `/api/teams/${tOp}/preferences`, { homeDashboardUID: 'secador-operario' });
+  await api('PUT', `/api/teams/${tTec}/preferences`, { homeDashboardUID: 'secador-tecnico' });
+  console.log('listo: usuarios operario (Viewer) y tecnico (Editor), equipos, permisos y tablero de inicio');
 })().catch((e) => { console.error(e.message); process.exit(1); });

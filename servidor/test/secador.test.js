@@ -133,6 +133,10 @@ test('flujo completo contra MongoDB', async (t) => {
     assert.equal((await srv.http('GET /api/lotes', { headers: GRA })).status, 200);
     const p = await srv.http('POST /api/lotes/:id/config', { headers: GRA, params: { id: 'L-04' }, body: { setpoint: 55 } });
     assert.equal(p.status, 403);
+    // /api/yo y la página /app: sin ventana del navegador si lo pide la página
+    assert.deepEqual((await srv.http('GET /api/yo', { headers: TEC })).body, { rol: 'tecnico' });
+    assert.ok((await srv.http('GET /api/yo', { headers: {} })).headers['www-authenticate']);
+    assert.deepEqual((await srv.http('GET /api/yo', { headers: { 'x-requested-with': 'secador-app' } })).headers, {});
   });
 
   await t.test('sin gravimetría, los derivados de x0 son null', async () => {
@@ -239,4 +243,11 @@ test('eventos y telemetría simultáneos se procesan en orden', async (t) => {
   for (let i = 1; i <= 50; i++) p.push(srv.ingresarTelemetria(registro({ seq: i, ts: new Date(Date.UTC(2026, 9, 1, 11, i)).toISOString() })));
   const r = await Promise.all(p);
   assert.ok(r.every((x) => x.ok), r.find((x) => !x.ok)?.motivo);
+});
+
+test('seguridad: eq del tópico y formato de eq', () => {
+  assert.equal(s.eqDelTopico('secador/SEC-01/telemetria', 'SEC-01'), null);
+  assert.match(s.eqDelTopico('secador/SEC-02/telemetria', 'SEC-01'), /tópico/);
+  assert.match(s.validarRegistro(registro({ eq: 'SEC-01/#' })), /eq inválido/);
+  assert.match(s.validarEvento({ eq: '../x', tipo: 'fin_ciclo', lote: null, ts: null }), /eq inválido/);
 });

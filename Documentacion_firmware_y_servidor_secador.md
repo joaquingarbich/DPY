@@ -595,6 +595,16 @@ avance = (m0 − masa_g) / (m0 − m_obj)
   - `Modo seguro`: `alerta_modo_seguro > 0`.
   - `Sin datos`: `min_sin_datos > 5` con un lote activo.
 - Punto de contacto: Telegram (bot del proyecto) al celular del operario y al grupo del equipo, con un mensaje en español que indica la acción ("Fin de ciclo en SEC-01: retire la bandeja"). Repite cada hora mientras la alerta siga activa.
+- Cada usuario entra directo a su tablero, y la interfaz está en español.
+
+### 15.5 Página de operación (`/app/`)
+
+Grafana sirve para mirar datos, pero no tiene formularios para cargarlos. Para el uso diario hay una página propia, servida por Node-RED (`servidor/nodered/publico/index.html`, sin dependencias, pensada para el celular). Usa la misma API:
+
+- **Vista del operario** (usuario `operario`, solo lectura): el estado en una palabra y con color, junto con la instrucción ("FIN: retire la bandeja. Mantenga el botón presionado 3 s para cerrar el lote"); el avance con una barra; la masa y su objetivo; la temperatura y el setpoint; las horas de secado; los últimos eventos con nombres legibles; y los pasos para iniciar y cerrar un lote. Se actualiza cada 30 s.
+- **Acciones del técnico** (usuario `tecnico`): resumen del lote, humedad inicial de laboratorio (en %), setpoint e intervalo, humedad final medida y descarga del CSV.
+- Los lotes se inician y se cierran en el secador, con el botón (§9.1). La página no lo reemplaza: muestra los pasos.
+- La página pide usuario y clave en su propio formulario y los envía como autenticación básica. Con el encabezado `X-Requested-With: secador-app`, la API responde 401 sin `WWW-Authenticate` para que el navegador no abra su propia ventana. `GET /api/yo` devuelve el rol.
 
 ---
 
@@ -671,3 +681,6 @@ Decisiones tomadas al escribir el código. Las secciones anteriores ya las inclu
 | 11 | Imagen `grafana/grafana:13.3.0` en lugar de `grafana-oss` | `grafana-oss` dejó de publicarse en la 13.0 | §15.1 |
 | 12 | Lógica en `lib/secador.js`, colecciones creadas por Node-RED | Pruebas con `node --test`; no hace falta un script de inicialización aparte | §15.2, §15.3, §16.3 |
 | 13 | Usuarios y permisos de Grafana con un script | Grafana no los aprovisiona con archivos | §15.4 |
+| 14 | Página de operación `/app/` con usuario `operario`, y endpoint `/api/yo` | Grafana no permite cargar datos; el operario necesita una pantalla simple | §15.5 |
+| 15 | El `eq` del mensaje debe coincidir con el del tópico y tener formato válido; `config_aplicada` y `reanudacion` se validan | Un mensaje no puede hacerse pasar por otro equipo ni escribir valores fuera de rango | §15.3 |
+| 16 | El editor de Node-RED se desactiva si falta su clave | Que un `.env` incompleto no deje el editor abierto en internet | §15.1 |

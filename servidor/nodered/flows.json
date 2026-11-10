@@ -59,7 +59,7 @@
     "type": "function",
     "z": "tab_secador",
     "name": "ingresar telemetría",
-    "func": "const r = await global.get('secador').ingresarTelemetria(msg.payload);\nif (!r.ok) node.warn(`rechazado: ${r.motivo}`);\nnode.status(r.ok\n  ? { fill: 'green', shape: 'dot', text: r.duplicado ? 'duplicado' : `${msg.payload.lote} seq ${msg.payload.seq}` }\n  : { fill: 'red', shape: 'ring', text: r.motivo });\nreturn null;",
+    "func": "const r = await global.get('secador').ingresarTelemetria(msg.payload, msg.topic);\nif (!r.ok) node.warn(`rechazado: ${r.motivo}`);\nnode.status(r.ok\n  ? { fill: 'green', shape: 'dot', text: r.duplicado ? 'duplicado' : `${msg.payload.lote} seq ${msg.payload.seq}` }\n  : { fill: 'red', shape: 'ring', text: r.motivo });\nreturn null;",
     "outputs": 0,
     "timeout": 0,
     "noerr": 0,
@@ -106,7 +106,7 @@
     "type": "function",
     "z": "tab_secador",
     "name": "ingresar evento",
-    "func": "const r = await global.get('secador').ingresarEvento(msg.payload);\nif (!r.ok) node.warn(`evento rechazado: ${r.motivo}`);\nnode.status({ fill: r.ok ? 'blue' : 'red', shape: 'dot', text: `${msg.payload.tipo}` });\nreturn null;",
+    "func": "const r = await global.get('secador').ingresarEvento(msg.payload, msg.topic);\nif (!r.ok) node.warn(`evento rechazado: ${r.motivo}`);\nnode.status({ fill: r.ok ? 'blue' : 'red', shape: 'dot', text: `${msg.payload.tipo}` });\nreturn null;",
     "outputs": 0,
     "timeout": 0,
     "noerr": 0,
@@ -331,5 +331,22 @@
     "x": 730,
     "y": 460,
     "wires": []
+  },
+  {
+    "id": "http_yo",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/yo",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 640,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
   }
 ]

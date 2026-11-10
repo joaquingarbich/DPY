@@ -125,6 +125,8 @@ Escriba `estado` y verifique `cal S`, `CT`, `K` y `n_lote`. La calibración y el
 
 Si la pulsación no hace nada, la bandeja no está quieta o la masa es de 500 g o menos. Espere y repita.
 
+El estado del secador y estos mismos pasos se ven también en la página de operación del servidor (`https://<dominio>/app/`, ver `servidor/MANUAL_DESPLIEGUE.md`).
+
 ## 8. Problemas frecuentes
 
 | Síntoma | Causa probable | Qué hacer |

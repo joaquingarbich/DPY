@@ -23,16 +23,12 @@ npm run simular     # publica 20 h de un lote L-04 como si fuera el ESP32
 
 | Qué | Dónde | Usuario / clave |
 |---|---|---|
-| Grafana | http://localhost:3000 | `admin` / `admin` |
+| **Página de operación** (operario y acciones del técnico) | http://localhost:1880/app/ | `operario` / `operario-dev`, `tecnico` / `tecnico-dev` |
+| Grafana | http://localhost:3000 | `admin` / `admin` (ver 3.1 para `operario` y `tecnico`) |
 | Editor de Node-RED | http://localhost:1880/editor | sin clave en desarrollo |
 | API | http://localhost:1880/api/... | `grafana` / `grafana-dev`, `tecnico` / `tecnico-dev` |
 
-Para probar la gravimetría y ver aparecer el avance y la humedad en los tableros:
-
-```
-curl -u tecnico:tecnico-dev -H 'content-type: application/json' -d '{"x0":0.8281}' \
-  http://localhost:1880/api/lotes/L-04/gravimetria/inicial
-```
+Para probar la gravimetría: entre a la página de operación como `tecnico`, pestaña *Acciones del técnico*, y cargue la humedad inicial (por ejemplo 82,81 %). En la vista *Secador* y en Grafana aparecen el avance y la humedad.
 
 Las alertas se ven en Grafana → *Alerting → Alert rules*. El envío a Telegram falla en local porque el token es de prueba, y es lo esperado. Los datos viven en memoria: se pierden al cerrar `npm run dev`.
 
@@ -128,7 +124,7 @@ Crea los usuarios `operario` (solo ve su tablero) y `tecnico` (ve y edita los do
 
 ## Parte 4. Verificar
 
-1. `https://secador.su-dominio.pe` abre Grafana con candado (HTTPS válido).
+1. `https://secador.su-dominio.pe` abre Grafana con candado (HTTPS válido), y `https://secador.su-dominio.pe/app/` abre la página de operación.
 2. `curl -u grafana:<API_GRAFANA_CLAVE> https://secador.su-dominio.pe/api/lotes` responde `[]`.
 3. En Grafana: *Alerting → Contact points → telegram-secador → Test*. El operario y el grupo deben recibir el mensaje.
 4. Cargue el firmware con `MQTT_HOST`, `MQTT_USUARIO=sec-01` y `MQTT_CLAVE` en `secretos.h` (ver `firmware/MANUAL.md`).
@@ -136,16 +132,18 @@ Crea los usuarios `operario` (solo ve su tablero) y `tecnico` (ve y edita los do
 
 ---
 
-## Parte 5. Uso diario del técnico
+## Parte 5. Uso diario
 
-Todos los comandos llevan `-u tecnico:<API_TECNICO_CLAVE>` y `-H 'content-type: application/json'`.
+Todo se hace en **`https://<dominio>/app/`**, que se usa bien desde el celular:
 
-| Qué | Comando |
-|---|---|
-| Humedad inicial de laboratorio (unas 7 h después del inicio) | `curl … -d '{"x0":0.8281}' https://<dominio>/api/lotes/L-04/gravimetria/inicial` |
-| Humedad final medida | `curl … -d '{"xf_medida":0.168}' https://<dominio>/api/lotes/L-04/gravimetria/final` |
-| Cambiar setpoint o intervalo | `curl … -d '{"setpoint":58,"intervalo_s":120}' https://<dominio>/api/lotes/L-04/config` |
-| Exportar CSV | Enlace del tablero técnico, o `curl … -o L-04.csv 'https://<dominio>/api/export.csv?lote=L-04'` |
+| Quién | Usuario | Qué ve y qué puede hacer |
+|---|---|---|
+| Operario | `operario` / `API_OPERARIO_CLAVE` | El estado del secador en grande ("Secando", "En pausa", "FIN: retire la bandeja", "Avise al técnico", "Sin conexión"), el avance, la temperatura, los últimos eventos y los pasos para iniciar y cerrar un lote |
+| Técnico | `tecnico` / `API_TECNICO_CLAVE` | Lo mismo, más la pestaña *Acciones del técnico*: humedad inicial de laboratorio, setpoint e intervalo, humedad final medida y descarga del CSV |
+
+Los lotes **se inician y se cierran en el secador**, con el botón (ver `firmware/MANUAL.md`, sección 7). La página muestra los pasos.
+
+Grafana (`https://<dominio>/`) queda para el análisis: gráficos históricos con zoom y las alertas a Telegram.
 
 La configuración queda **retenida** en el broker: si el equipo está sin red, la recibe al reconectar. Tras aplicarla, el equipo responde con el evento `config_aplicada`, visible en el tablero técnico. Si responde con `config_rechazada`, revise los valores.
 

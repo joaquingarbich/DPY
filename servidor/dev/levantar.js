@@ -11,7 +11,7 @@ const { Aedes } = require('aedes');
 const RAIZ = path.join(__dirname, '..');
 const DEV = {
   MQTT_USUARIO: 'sec-01', MQTT_CLAVE: 'clave-dev',
-  API_TECNICO_CLAVE: 'tecnico-dev', API_GRAFANA_CLAVE: 'grafana-dev',
+  API_TECNICO_CLAVE: 'tecnico-dev', API_GRAFANA_CLAVE: 'grafana-dev', API_OPERARIO_CLAVE: 'operario-dev',
   GF_ADMIN_CLAVE: 'admin',
   TELEGRAM_BOT_TOKEN: '0:token-de-prueba', TELEGRAM_CHAT_OPERARIO: '1', TELEGRAM_CHAT_GRUPO: '2',
 };
@@ -38,7 +38,7 @@ function lanzar(nombre, cmd, args, env) {
   console.log('[mqtt] mqtt://localhost:1883 (usuario sec-01)');
 
   lanzar('node-red', process.execPath, [path.join(RAIZ, 'node_modules/node-red/red.js'), '--settings', path.join(RAIZ, 'nodered/settings.js'), '--userDir', path.join(__dirname, '.nodered')], {
-    ...DEV, MONGODB_URI: mongo.getUri(), MQTT_URL: 'mqtt://localhost:1883',
+    ...DEV, MONGODB_URI: mongo.getUri(), MQTT_URL: 'mqtt://localhost:1883', NODE_RED_EDITOR_ABIERTO: '1',
   });
 
   let grafana = null;
@@ -53,7 +53,7 @@ function lanzar(nombre, cmd, args, env) {
       ...DEV,
       GF_PATHS_DATA: datos, GF_PATHS_PLUGINS: plugins, GF_PATHS_LOGS: path.join(datos, 'logs'),
       GF_PATHS_PROVISIONING: path.join(RAIZ, 'grafana/provisioning'),
-      GF_SECURITY_ADMIN_PASSWORD: DEV.GF_ADMIN_CLAVE, GF_LOG_LEVEL: 'warn',
+      GF_SECURITY_ADMIN_PASSWORD: DEV.GF_ADMIN_CLAVE, GF_LOG_LEVEL: 'warn', GF_USERS_DEFAULT_LANGUAGE: 'es-ES',
       NODERED_URL: 'http://localhost:1880', GRAFANA_DASHBOARDS: path.join(RAIZ, 'grafana/dashboards'),
     });
     console.log('[grafana] http://localhost:3000 (admin / admin)');

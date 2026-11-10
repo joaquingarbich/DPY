@@ -4,6 +4,7 @@ WORKDIR /data
 RUN npm install --omit=dev --no-fund --no-audit mongodb@7.8.0
 COPY settings.js flows.json flows_cred.json /data/
 COPY lib /data/lib
+COPY publico /data/publico
 WORKDIR /usr/src/node-red
 ENV NODE_RED_ENABLE_PROJECTS=false
 CMD ["npm", "start", "--", "--userDir", "/data", "--settings", "/data/settings.js"]

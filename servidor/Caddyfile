@@ -5,6 +5,10 @@
 	handle /api/* {
 		reverse_proxy nodered:1880
 	}
+	# Página de operación: vista del operario y acciones del técnico
+	handle /app* {
+		reverse_proxy nodered:1880
+	}
 	handle /editor* {
 		reverse_proxy nodered:1880
 	}

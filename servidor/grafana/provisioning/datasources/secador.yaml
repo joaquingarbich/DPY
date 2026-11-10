@@ -12,6 +12,6 @@ datasources:
     jsonData:
       auth_method: basicAuth
       allowedHosts:
-        - ${NODERED_URL}
+        - ${NODERED_URL}/   # la barra impide que "http://nodered:1880.otro.com" pase el filtro
     secureJsonData:
       basicAuthPassword: ${API_GRAFANA_CLAVE}

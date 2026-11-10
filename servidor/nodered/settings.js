@@ -6,7 +6,7 @@ const env = (k, def) => process.env[k] ?? def;
 const secador = require('./lib/secador').crear({
   uri: env('MONGODB_URI', 'mongodb://localhost:27017'),
   db: env('MONGODB_DB', 'secador'),
-  usuarios: { tecnico: env('API_TECNICO_CLAVE'), grafana: env('API_GRAFANA_CLAVE') },
+  usuarios: { tecnico: env('API_TECNICO_CLAVE'), grafana: env('API_GRAFANA_CLAVE'), operario: env('API_OPERARIO_CLAVE') },
 });
 
 module.exports = {
@@ -14,9 +14,12 @@ module.exports = {
   flowFile: path.join(__dirname, 'flows.json'),
   // flows_cred.json solo contiene ${MQTT_USUARIO} y ${MQTT_CLAVE}: los valores vienen del entorno.
   credentialSecret: false,
-  httpAdminRoot: '/editor',
+  // Sin hash el editor queda DESACTIVADO (falla cerrado). En desarrollo, NODE_RED_EDITOR_ABIERTO=1 lo abre sin clave.
+  httpAdminRoot: env('NODE_RED_EDITOR_HASH') || env('NODE_RED_EDITOR_ABIERTO') === '1' ? '/editor' : false,
   httpNodeRoot: '/',
-  // Hash bcrypt de la clave del editor: `npx node-red admin hash-pw`. Sin hash, el editor queda abierto (solo desarrollo).
+  // Página de operación (vista del operario y acciones del técnico) en /app/
+  httpStatic: [{ path: path.join(__dirname, 'publico'), root: '/app/' }],
+  // Hash bcrypt de la clave del editor: `npx node-red admin hash-pw`.
   adminAuth: env('NODE_RED_EDITOR_HASH') ? {
     type: 'credentials',
     users: [{ username: 'admin', password: env('NODE_RED_EDITOR_HASH'), permissions: '*' }],

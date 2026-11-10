@@ -28,8 +28,18 @@ const CALIBRACION_INICIAL = {
 // ---------------------------------------------------------------- funciones puras
 const esNum = (v) => typeof v === 'number' && Number.isFinite(v);
 
+const EQ_VALIDO = /^[A-Z0-9-]{1,20}$/;
+
+// El equipo solo puede publicar en su propio tópico: secador/<eq>/...
+function eqDelTopico(topico, eq) {
+  if (topico === undefined) return null;   // llamadas internas y pruebas
+  const t = String(topico).split('/');
+  return t[1] === eq ? null : 'eq no coincide con el tópico';
+}
+
 function validarRegistro(r) {
   if (!r || typeof r !== 'object') return 'no es un objeto';
+  if (!EQ_VALIDO.test(r.eq || '')) return 'eq inválido';
   for (const k of ['eq', 'fw', 'lote']) if (typeof r[k] !== 'string' || !r[k]) return `falta ${k}`;
   if (!Number.isInteger(r.seq) || r.seq < 1) return 'seq inválido';
   if (r.ts !== null && (typeof r.ts !== 'string' || Number.isNaN(Date.parse(r.ts)))) return 'ts inválido';
@@ -47,7 +57,7 @@ function validarRegistro(r) {
 
 function validarEvento(e) {
   if (!e || typeof e !== 'object') return 'no es un objeto';
-  if (typeof e.eq !== 'string' || !e.eq) return 'falta eq';
+  if (typeof e.eq !== 'string' || !EQ_VALIDO.test(e.eq)) return 'eq inválido';
   if (typeof e.tipo !== 'string' || !e.tipo) return 'falta tipo';
   if (e.lote !== null && typeof e.lote !== 'string') return 'lote inválido';
   if (e.ts !== null && (typeof e.ts !== 'string' || Number.isNaN(Date.parse(e.ts)))) return 'ts inválido';
@@ -174,9 +184,9 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
   }
 
   // ---------------- ingreso de telemetría (validar → deduplicar → calcular → insertar)
-  async function ingresarTelemetria(r) {
+  async function ingresarTelemetria(r, topico) {
     const d = await base();
-    const motivo = validarRegistro(r);
+    const motivo = validarRegistro(r) || eqDelTopico(topico, r.eq);
     if (motivo) return rechazar(r, motivo);
     const lote = await d.collection('lotes').findOne({ _id: r.lote });
     if (!lote) return rechazar(r, 'lote inexistente');
@@ -221,9 +231,9 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
   }
 
   // ---------------- eventos y ciclo de vida del lote
-  async function ingresarEvento(e) {
+  async function ingresarEvento(e, topico) {
     const d = await base();
-    const motivo = validarEvento(e);
+    const motivo = validarEvento(e) || eqDelTopico(topico, e.eq);
     if (motivo) return rechazar(e, `evento: ${motivo}`);
     const ts = e.ts ? new Date(e.ts) : ahora();
     const datos = e.datos || {};
@@ -254,8 +264,9 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
         break;
       }
       case 'cierre_lote': await set({ estado: 'cerrado', cierre: ts, motivo_cierre: datos.motivo || null }); break;
-      case 'reanudacion': if (datos.estado) await set({ estado: datos.estado }); break;
+      case 'reanudacion': if (LOTE_ACTIVO.includes(datos.estado)) await set({ estado: datos.estado }); break;
       case 'config_aplicada': {
+        if (validarConfig(datos)) break;   // valores fuera de rango: solo queda el evento
         const c = {};
         for (const k of ['x0', 'x0_lab', 'xf', 'setpoint', 'intervalo_s']) if (datos[k] !== undefined) c[k] = datos[k];
         if (esNum(datos.m_obj_g) && datos.m_obj_g > 0) c.m_obj = datos.m_obj_g;
@@ -274,6 +285,7 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
     const clave = resto.join(':');
     if (usuarios.tecnico && u === 'tecnico' && iguales(clave, usuarios.tecnico)) return 'tecnico';
     if (usuarios.grafana && u === 'grafana' && iguales(clave, usuarios.grafana)) return 'lectura';
+    if (usuarios.operario && u === 'operario' && iguales(clave, usuarios.operario)) return 'lectura';
     return null;
   }
 
@@ -423,7 +435,13 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
   // Punto de entrada para los nodos http in. `ruta` es "MÉTODO /patrón".
   async function http(ruta, req) {
     const rol = rolDe(req);
-    if (!rol) return { status: 401, headers: { 'www-authenticate': 'Basic realm="secador"' }, body: { error: 'no autorizado' } };
+    if (!rol) {
+      // La página /app pide la clave en su propio formulario: sin este encabezado el navegador
+      // mostraría además su ventana de usuario y clave.
+      const pagina = req && req.headers && req.headers['x-requested-with'] === 'secador-app';
+      return { status: 401, headers: pagina ? {} : { 'www-authenticate': 'Basic realm="secador"' }, body: { error: 'no autorizado' } };
+    }
+    if (ruta === 'GET /api/yo') return json(200, { rol });
     if (ruta.startsWith('POST') && rol !== 'tecnico') return json(403, { error: 'solo el usuario tecnico' });
     const f = rutas[ruta];
     if (!f) return json(404, { error: 'ruta desconocida' });
@@ -448,6 +466,6 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
 }
 
 module.exports = {
-  crear, validarRegistro, validarEvento, validarConfig, interpolar, derivadosFijos, derivadosLote,
+  crear, eqDelTopico, validarRegistro, validarEvento, validarConfig, interpolar, derivadosFijos, derivadosLote,
   masaObjetivo, aCsv, CALIBRACION_INICIAL,
 };
