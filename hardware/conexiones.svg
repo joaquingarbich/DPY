@@ -33,7 +33,7 @@
   <text x="1170" y="400" text-anchor="end" class="s">1-Wire</text>
   <text x="1170" y="510" text-anchor="end" class="s">Celda de carga</text>
   <text x="1170" y="635" text-anchor="end" class="s">SPI (VSPI)</text>
-  <text x="1170" y="785" text-anchor="end" class="s">Ventilador 4 hilos, 12 V</text>
+  <text x="310" y="782" class="s">Ventilador de 4 hilos (12 V)</text>
   <text x="1170" y="985" text-anchor="end" class="s">Interfaz</text>
 
   <!-- ESP32 -->
@@ -116,10 +116,10 @@
   <rect x="330" y="398" width="12" height="28" fill="#fff" stroke="#333"/>
   <path class="ow" d="M336 426 V430"/><circle class="nodo" cx="336" cy="430" r="4"/>
   <text x="350" y="410" class="s">4,7 kΩ a 3V3</text>
-  <rect class="caja" x="600" y="395" width="230" height="70"/>
-  <text x="715" y="418" text-anchor="middle" class="tit">DS18B20 (sumergible)</text>
-  <text x="715" y="436" text-anchor="middle" class="s">amarillo = datos · rojo = 3V3 · negro = GND</text>
-  <text x="715" y="453" text-anchor="middle" class="s">salida del colector</text>
+  <rect class="caja" x="600" y="395" width="300" height="70"/>
+  <text x="750" y="418" text-anchor="middle" class="tit">DS18B20 (sumergible)</text>
+  <text x="750" y="436" text-anchor="middle" class="s">amarillo = datos · rojo = 3V3 · negro = GND</text>
+  <text x="750" y="453" text-anchor="middle" class="s">salida del colector</text>
 
   <!-- HX711 -->
   <path class="hx" d="M260 530 H600"/>
@@ -168,12 +168,12 @@
   <text x="750" y="955" class="s">S → GND común</text>
   <path class="fan" d="M860 880 H900" stroke-dasharray="6 4"/>
   <rect class="caja" x="900" y="780" width="180" height="160"/>
-  <text x="990" y="805" text-anchor="middle" class="tit">Ventilador 80 mm</text>
+  <text x="990" y="774" text-anchor="middle" class="tit">Ventilador 80 mm</text>
   <g class="s"><text x="910" y="804">4 PWM (azul)</text></g>
   <text x="910" y="845" class="s">3 TACO (verde)</text>
   <text x="910" y="885" class="s">2 +12 V (amarillo) ← fuente</text>
   <text x="910" y="925" class="s">1 GND (negro)</text>
-  <text x="300" y="795" class="s" fill="#c62828">PWM 25 kHz</text>
+  <text x="700" y="795" class="s" fill="#c62828">PWM 25 kHz</text>
 
   <!-- Botón y LED -->
   <path class="io" d="M260 1000 H520"/>
