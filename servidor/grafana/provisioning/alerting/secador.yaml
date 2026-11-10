@@ -1,0 +1,150 @@
+# Alertas (§15.4): evaluación cada 1 min sobre /api/ultimo, una instancia por equipo.
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: secador
+    template: |
+      {{ define "secador.mensaje" }}{{ range .Alerts.Firing }}⚠️ {{ .Annotations.summary }}
+      {{ .Annotations.description }}
+      {{ end }}{{ range .Alerts.Resolved }}✅ Resuelto: {{ .Annotations.summary }}
+      {{ end }}{{ end }}
+
+contactPoints:
+  - orgId: 1
+    name: telegram-secador
+    receivers:
+      - uid: telegram-operario
+        type: telegram
+        settings:
+          bottoken: ${TELEGRAM_BOT_TOKEN}
+          chatid: "${TELEGRAM_CHAT_OPERARIO}"
+          message: '{{ template "secador.mensaje" . }}'
+          parse_mode: None
+      - uid: telegram-grupo
+        type: telegram
+        settings:
+          bottoken: ${TELEGRAM_BOT_TOKEN}
+          chatid: "${TELEGRAM_CHAT_GRUPO}"
+          message: '{{ template "secador.mensaje" . }}'
+          parse_mode: None
+
+policies:
+  - orgId: 1
+    receiver: telegram-secador
+    group_by: [alertname, eq]
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 1h
+
+groups:
+  - orgId: 1
+    name: secador
+    folder: Secador
+    interval: 1m
+    rules:
+      - uid: fin-ciclo
+        title: Fin de ciclo
+        condition: B
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: 'Fin de ciclo en {{ $labels.eq }}: retire la bandeja'
+          description: 'El lote llegó a la masa objetivo. Retire la bandeja y cierre el lote con una pulsación larga.'
+        labels:
+          equipo: secador
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: secador-api
+            model:
+              refId: A
+              type: json
+              source: url
+              parser: backend
+              format: table
+              url: /api/ultimo
+              url_options: { method: GET, data: '' }
+              root_selector: ''
+              columns:
+                - { selector: eq, text: eq, type: string }
+                - { selector: alerta_fin_ciclo, text: alerta_fin_ciclo, type: number }
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: modo-seguro
+        title: Modo seguro
+        condition: B
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: 'Modo seguro en {{ $labels.eq }}: falla el sensor de la cámara'
+          description: 'El ventilador está al 100 %. Revise el SHT31 de la cámara.'
+        labels:
+          equipo: secador
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: secador-api
+            model:
+              refId: A
+              type: json
+              source: url
+              parser: backend
+              format: table
+              url: /api/ultimo
+              url_options: { method: GET, data: '' }
+              root_selector: ''
+              columns:
+                - { selector: eq, text: eq, type: string }
+                - { selector: alerta_modo_seguro, text: alerta_modo_seguro, type: number }
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: sin-datos
+        title: Sin datos
+        condition: B
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: 'Sin datos de {{ $labels.eq }} hace {{ $values.A.Value }} min'
+          description: 'No llega telemetría con un lote activo. Revise la energía y el WiFi del secador.'
+        labels:
+          equipo: secador
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: secador-api
+            model:
+              refId: A
+              type: json
+              source: url
+              parser: backend
+              format: table
+              url: /api/ultimo
+              url_options: { method: GET, data: '' }
+              root_selector: ''
+              columns:
+                - { selector: eq, text: eq, type: string }
+                - { selector: min_sin_datos, text: min_sin_datos, type: number }
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [5] }

@@ -1,0 +1,14 @@
+# HTTPS automático (Let's Encrypt) para el dominio del .env.
+{$DOMINIO} {
+	encode gzip
+	# API de Node-RED (tiene su propia autenticación básica) y su editor (adminAuth)
+	handle /api/* {
+		reverse_proxy nodered:1880
+	}
+	handle /editor* {
+		reverse_proxy nodered:1880
+	}
+	handle {
+		reverse_proxy grafana:3000
+	}
+}

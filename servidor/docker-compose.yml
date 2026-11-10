@@ -1,0 +1,42 @@
+# Servidor del secador (§15.1). Requiere un .env (copiar de .env.ejemplo).
+# MongoDB Atlas y HiveMQ Cloud son servicios externos: aquí solo van sus URL.
+services:
+  nodered:
+    build: ./nodered
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MQTT_URL: mqtts://${MQTT_HOST}:8883
+    expose: ["1880"]          # solo accesible por el proxy
+
+  grafana:
+    image: grafana/grafana:13.3.0   # edición OSS; la imagen grafana-oss dejó de publicarse en 13.0
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_CLAVE}
+      GF_SERVER_ROOT_URL: https://${DOMINIO}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      NODERED_URL: http://nodered:1880
+      GRAFANA_DASHBOARDS: /var/lib/grafana/tableros
+    volumes:
+      - grafana-datos:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/tableros:ro
+    expose: ["3000"]
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-datos:/data
+
+volumes:
+  grafana-datos:
+  caddy-datos:

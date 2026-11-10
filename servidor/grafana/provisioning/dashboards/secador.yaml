@@ -1,0 +1,16 @@
+apiVersion: 1
+providers:
+  - name: operario
+    folder: Operario
+    folderUid: operario
+    type: file
+    allowUiUpdates: false
+    options:
+      path: ${GRAFANA_DASHBOARDS}/operario
+  - name: tecnico
+    folder: Técnico
+    folderUid: tecnico
+    type: file
+    allowUiUpdates: true
+    options:
+      path: ${GRAFANA_DASHBOARDS}/tecnico

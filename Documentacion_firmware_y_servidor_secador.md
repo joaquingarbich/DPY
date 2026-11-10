@@ -498,70 +498,103 @@ La desconexión real de sensores y los cortes de energía se hacen físicamente;
 
 ### 15.1 Despliegue
 
-- Máquina virtual Linux en la nube (1 vCPU, 1 GB de RAM) con Docker Compose:
-  - `nodered/node-red` (puerto 1880, solo accesible por el proxy)
-  - `grafana/grafana-oss` (puerto 3000)
-  - `caddy` como proxy inverso con HTTPS automático
+- Máquina virtual Linux en la nube (1 vCPU, 1 GB de RAM) con Docker Compose (`servidor/docker-compose.yml`):
+  - `nodered`: imagen `nodered/node-red:5.0.9` más el driver `mongodb` (`servidor/nodered/Dockerfile`). Solo accesible por el proxy.
+  - `grafana`: imagen `grafana/grafana:13.3.0` (edición OSS; la imagen `grafana-oss` dejó de publicarse en la 13.0) con el complemento Infinity.
+  - `caddy` como proxy inverso con HTTPS automático: `/api/*` y `/editor` van a Node-RED; el resto, a Grafana.
 - MongoDB Atlas, clúster M0 gratuito, base `secador`.
-- HiveMQ Cloud, plan gratuito.
+- HiveMQ Cloud, plan gratuito. El servidor usa un usuario propio, distinto del de `SEC-01`.
+- Todo lo variable (URL, claves, dominio, bot de Telegram) va en `servidor/.env`, a partir de `.env.ejemplo`. El paso a paso está en `servidor/MANUAL_DESPLIEGUE.md`.
 
 ### 15.2 Colecciones de MongoDB
 
+Node-RED las crea al arrancar si no existen, junto con sus índices y la calibración inicial.
+
 | Colección | Tipo | Campos clave | Índices |
 |---|---|---|---|
-| `mediciones` | Series de tiempo (`timeField: ts`, `metaField: meta {eq, lote}`, `granularity: minutes`) | Todos los del registro + derivados | Único lógico por `meta.eq` + `ts` (se aplica en Node-RED; las series de tiempo no admiten índices únicos) |
-| `eventos` | Normal | `eq`, `lote`, `ts`, `tipo`, `nivel`, `datos` | `{lote:1, ts:1}` |
-| `lotes` | Normal | `_id` (lote), `eq`, `inicio`, `cierre`, `m0`, `x0`, `xf`, `m_obj`, `estado`, gravimetría inicial y final | Ninguno adicional |
-| `calibracion` | Normal | `S`, `C_T`, `K`, curva de caudal | Ninguno adicional |
+| `mediciones` | Series de tiempo (`timeField: ts`, `metaField: meta {eq, lote}`, `granularity: minutes`) | Todos los del registro + `g_est`, `m_dot`, `eta`, `recibido` y `ts_servidor` | Único lógico por `meta.eq` + `meta.lote` + `seq` (se aplica en Node-RED; las series de tiempo no admiten índices únicos) |
+| `eventos` | Normal | `eq`, `lote`, `ts`, `tipo`, `nivel`, `datos`, `recibido` | `{lote:1, ts:1}` |
+| `lotes` | Normal | `_id` (lote), `eq`, `inicio`, `inicio_operacion`, `cierre`, `m0`, `x0`, `x0_lab`, `xf`, `m_obj`, `setpoint`, `intervalo_s`, `estado`, `gravimetria_inicial`, `gravimetria_final` | Ninguno adicional |
+| `calibracion` | Normal | Documento `_id: "actual"` con `S`, `C_T`, `K`, `curva_caudal` (`[{duty, kg_s}]`) y `provisional` | Ninguno adicional |
+| `rechazados` | Normal | `recibido`, `motivo`, `payload` | `{recibido:1}` |
+
+La curva de caudal inicial es **de ejemplo** y está marcada `provisional: true`. Mientras no se cargue la curva medida, la η que se calcula no vale para el informe. Para cambiarla basta editar el documento en Atlas; Node-RED la vuelve a leer cada minuto.
 
 ### 15.3 Flujos de Node-RED
 
-**Ingreso** (`mqtt in` → `json` → `function: validar` → `function: deduplicar` → `mongodb out`):
+La lógica está en `servidor/nodered/lib/secador.js`, que se carga en `functionGlobalContext`. Los nodos `function` solo la llaman. Así se prueba con `node --test` sin levantar Node-RED (§16.3).
+
+**Ingreso** (`mqtt in secador/+/telemetria` → `function: ingresar telemetría`):
 
 - `validar`: comprueba campos obligatorios y tipos, rangos físicos (los mismos del firmware) y que `lote` exista en `lotes`. Lo que no pasa va a la colección `rechazados` con el motivo.
-- `deduplicar`: mantiene en memoria un conjunto con la clave `eq|lote|seq|ts` de las últimas 24 h y consulta MongoDB solo si el conjunto se reinició. Un duplicado se cuenta y se descarta.
+- `deduplicar`: mantiene en memoria un conjunto con la clave `eq|lote|seq|ts` de las últimas 24 h. Durante las primeras 24 h después de arrancar consulta además MongoDB (`eq` + `lote` + `seq`), porque el conjunto se reinició. Un duplicado se cuenta y se descarta.
+- Telemetría y eventos se procesan **de a uno y en orden de llegada**. Llegan por tópicos distintos, y en paralelo la primera telemetría de un lote podía validarse antes de que `masa_inicial` lo creara.
+- El cliente MQTT del servidor usa sesión persistente (`clean_session = false`) con QoS 1. Si Node-RED se reinicia, el broker guarda lo que llegue mientras tanto (el equipo ya recibió el PUBACK y no lo reenvía).
 
-**Cálculo** (en la misma cadena, antes de insertar):
+**Cálculo**:
 
 ```
 m_ss  = m0 · (1 − x0)
 X_bh  = 1 − m_ss / masa_g
 X_bs  = (masa_g − m_ss) / m_ss
-MR    = X_bs / X_bs0
+MR    = X_bs / X_bs0,   X_bs0 = x0 / (1 − x0)
 G_est = luz_lux / K
-ṁ     = interpolación lineal en la curva de caudal (duty → kg/s)
+ṁ     = interpolación lineal en la curva de caudal (duty → kg/s), saturada en los extremos
 η     = ṁ · 1006 · (t_col − t_ent) / (0,65 · G_est)    solo si G_est > 200 W/m² y duty > 0
 avance = (m0 − masa_g) / (m0 − m_obj)
 ```
 
-Mientras la humedad de laboratorio no llegue, los derivados que dependen de ella se guardan como `null` y se recalculan con un nodo `inject` cuando `lotes.x0` se actualiza.
+- `G_est`, `ṁ` y `η` no dependen de la humedad de laboratorio y se guardan al insertar.
+- `X_bh`, `X_bs`, `MR` y `avance` dependen de `x0`, así que se calculan **al leer** (API y CSV) con los datos vigentes del lote. Valen `null` mientras `x0_lab` sea `false`. Cuando llega la gravimetría quedan disponibles para todos los registros, incluidos los anteriores, sin recalcular nada en la base.
 
-**Eventos**: guarda cada evento y, para los críticos, actualiza `lotes.estado`. Un nodo `trigger` emite `sin_datos` si no llega telemetría en 5 intervalos.
+**Eventos** (`mqtt in secador/+/evento` → `function: ingresar evento`). Se guarda cada evento y se actualiza el lote:
 
-**Configuración**: formulario `ui` o endpoint `POST /api/lotes/:id/config` (con usuario técnico) que valida y publica el mensaje retenido en `secador/SEC-01/config`.
+| Evento | Efecto en `lotes` |
+|---|---|
+| `inicio_lote` | Crea el lote: `eq`, `inicio`, `estado: carga`, `tara_cuentas` |
+| `masa_inicial` | `m0`, `x0` (provisional), `xf`, `m_obj`, `inicio_operacion`, `estado: operacion` |
+| `carga_cancelada` | `estado: cancelado` |
+| `fin_ciclo` | `estado: fin_ciclo` |
+| `modo_seguro` / `fin_modo_seguro` | `estado: modo_seguro` / vuelve al estado previo |
+| `cierre_lote` | `estado: cerrado`, `cierre`, `motivo_cierre` |
+| `config_aplicada` | Parámetros que el equipo confirmó |
+| `reanudacion` | `estado` informado por el equipo |
 
-**API para Grafana** (`http in` → consulta → `http response`, con autenticación básica):
+`sin_datos`: si no llega telemetría en 5 intervalos **con un lote activo** (`operacion`, `fin_ciclo` o `modo_seguro`), se guarda el evento `sin_datos` (crítico). Sin lote no hay telemetría, por diseño del firmware (§10.1).
+
+**Configuración y gravimetría** (solo el usuario `tecnico`). Cada endpoint valida, guarda en `lotes` y publica el mensaje **retenido** en `secador/<eq>/config` con todos los parámetros vigentes, incluido `x0_lab` (§11.3):
+
+| Endpoint | Cuerpo | Efecto |
+|---|---|---|
+| `POST /api/lotes/:id/config` | `{x0?, xf?, setpoint?, intervalo_s?}` | Cambia parámetros; un `x0` escrito aquí es provisional (`x0_lab: false`) |
+| `POST /api/lotes/:id/gravimetria/inicial` | `{x0}` | Humedad de laboratorio: `x0_lab: true`, recalcula `m_obj` |
+| `POST /api/lotes/:id/gravimetria/final` | `{xf_medida}` | Solo la guarda, para el informe |
+
+**API para Grafana** (`http in` → `function: api` → `http response`). Usa autenticación básica con dos usuarios: `grafana` (solo lectura) y `tecnico` (lectura, configuración y gravimetría).
 
 | Endpoint | Devuelve |
 |---|---|
-| `GET /api/lotes` | Lista de lotes |
-| `GET /api/series?lote=&desde=&hasta=&campos=` | Serie de tiempo (JSON) |
-| `GET /api/ultimo?eq=` | Último registro con derivados |
-| `GET /api/eventos?lote=` | Eventos |
-| `GET /api/export.csv?lote=` | Exportación CSV completa |
+| `GET /api/lotes?eq=` | Lista de lotes |
+| `GET /api/series?lote=&desde=&hasta=&campos=` | Serie de tiempo (JSON) con los derivados; `desde`/`hasta` en ISO o milisegundos |
+| `GET /api/ultimo?eq=` | Una fila por equipo: último registro con derivados, datos del lote, `estado_panel`, `en_linea`, `min_sin_datos`, `alerta_fin_ciclo`, `alerta_modo_seguro` |
+| `GET /api/eventos?lote=&eq=&limite=` | Eventos, del más reciente al más antiguo |
+| `GET /api/rechazados?desde=&hasta=` | Registros rechazados y su motivo |
+| `GET /api/export.csv?lote=` | Exportación CSV completa con derivados |
 
 ### 15.4 Grafana
 
-- Origen de datos: complemento **Infinity** (gratuito, de Grafana Labs) apuntando a la API de Node-RED. Se descartó el conector oficial de MongoDB por ser de la edición Enterprise; también un conector comunitario, para no depender de un complemento sin mantenimiento asegurado.
-- Organización con dos equipos:
-  - `operario` (rol *Viewer*): tablero "Secador - Operario".
-  - `tecnico` (rol *Editor*): tablero "Secador - Técnico" y exportación.
-- Variables del tablero técnico: `eq`, `lote`, rango de tiempo.
-- Reglas de alerta (evaluación cada 1 min):
-  - `Fin de ciclo`: último evento del lote = `fin_ciclo`.
-  - `Modo seguro`: último evento = `modo_seguro`.
-  - `Sin datos`: más de 5 min sin registro.
-- Punto de contacto: Telegram (bot del proyecto) al celular del operario y al grupo del equipo, con un mensaje en español que indica la acción ("Retire la bandeja").
+- Origen de datos: complemento **Infinity** (gratuito, de Grafana Labs) apuntando a la API de Node-RED, con el usuario `grafana`. Se descartó el conector oficial de MongoDB por ser de la edición Enterprise; también un conector comunitario, para no depender de un complemento sin mantenimiento asegurado.
+- Todo se aprovisiona con archivos (`servidor/grafana/provisioning`): origen de datos, tableros, alertas, plantilla de mensaje y punto de contacto. Los tableros se generan con `grafana/generar_tableros.py`.
+- Usuarios, equipos y permisos se crean con `grafana/configurar-equipos.js`, porque Grafana no permite aprovisionarlos con archivos:
+  - `operario` (rol *Viewer*): solo ve la carpeta *Operario*, con el tablero "Secador - Operario".
+  - `tecnico` (rol *Editor*): ve las dos carpetas y edita *Técnico*.
+- Tablero **"Secador - Operario"** (para el celular): estado en una palabra con color (`Secando`, `En pausa`, `FIN: retire la bandeja`, `Modo seguro`, `Sin conexión`); avance del secado (indicador de aguja); masa actual y objetivo; temperatura de la cámara y setpoint; horas de secado; lote; últimos 5 eventos.
+- Tablero **"Secador - Técnico"**, con variables `eq`, `lote` y rango de tiempo: masa y `m_obj`; `X_bh` y `MR`; temperaturas (cámara, entrada, colector, setpoint); humedades relativas; `G_est` y duty; η; calidad de datos (`n_descartes`, `senal_dbm`); registros rechazados; eventos del lote; enlace a `export.csv`.
+- Reglas de alerta (evaluación cada 1 min sobre `/api/ultimo`, una instancia por equipo):
+  - `Fin de ciclo`: `alerta_fin_ciclo > 0` (el lote está en `fin_ciclo`).
+  - `Modo seguro`: `alerta_modo_seguro > 0`.
+  - `Sin datos`: `min_sin_datos > 5` con un lote activo.
+- Punto de contacto: Telegram (bot del proyecto) al celular del operario y al grupo del equipo, con un mensaje en español que indica la acción ("Fin de ciclo en SEC-01: retire la bandeja"). Repite cada hora mientras la alerta siga activa.
 
 ---
 
@@ -581,20 +614,28 @@ Mientras la humedad de laboratorio no llegue, los derivados que dependen de ella
 
 Cada requisito RF/RNF del capítulo 4 tiene su prueba en el apartado 5.3 del informe, con el procedimiento y el criterio de aceptación.
 
+### 16.3 Pruebas del servidor (`npm test` en `servidor/`)
+
+Con `node --test` y un MongoDB 8.0 real en memoria (`mongodb-memory-server`): validación, interpolación, derivados, CSV, creación de colecciones, deduplicación (también después de reiniciar), ciclo de vida del lote por eventos, gravimetría y configuración retenida, permisos de la API, alertas de `/api/ultimo` y orden de procesamiento con mensajes simultáneos.
+
+De punta a punta, en local y sin cuentas: `npm run dev` levanta MongoDB, un broker MQTT, Node-RED y Grafana, y `npm run simular` publica un lote como si fuera el ESP32.
+
 ---
 
 ## 17. Pendientes para escribir el código
 
 - Escribir `secretos.h` con las credenciales reales (el certificado raíz ya está en la plantilla).
-- Generar el bot de Telegram y registrar el `chat_id` del operario.
-- Exportar los flujos de Node-RED (`flows.json`) y los tableros de Grafana (JSON) al repositorio.
+- Generar el bot de Telegram y registrar el `chat_id` del operario y del grupo en `servidor/.env`.
+- Reemplazar la curva de caudal de ejemplo por la medida y quitar `provisional` (§15.2).
 - Adjuntar en el apéndice: código fuente del firmware por módulos, `flows.json` y los JSON de los tableros.
 
 ---
 
 ## 18. Cambios de la versión 1.1 al código
 
-Decisiones tomadas al escribir el firmware `1.1.0`. Las secciones anteriores ya las incluyen.
+Decisiones tomadas al escribir el código. Las secciones anteriores ya las incluyen.
+
+### 18.1 Firmware `1.1.0`
 
 | # | Cambio | Motivo | Secciones |
 |---|---|---|---|
@@ -613,3 +654,20 @@ Decisiones tomadas al escribir el firmware `1.1.0`. Las secciones anteriores ya 
 | 13 | Pulsación larga registrada a los 3 s | Coincide con el LED fijo y hace natural la doble pulsación | §9.3 |
 | 14 | Integral al volver de `MODO_SEGURO` = 100 % | Transferencia sin salto | §8.1 |
 
+### 18.2 Servidor
+
+| # | Cambio | Motivo | Secciones |
+|---|---|---|---|
+| 1 | El lote se crea y actualiza solo, a partir de los eventos del equipo | `validar` exige el lote, y el documento no decía quién lo crea | §15.3 |
+| 2 | Endpoints de gravimetría inicial y final; se omite el formulario `ui` | La humedad de laboratorio necesita una vía de entrada; un endpoint cubre ambos usos | §15.3 |
+| 3 | Curva de caudal de ejemplo marcada `provisional` | Aún no hay datos medidos | §15.2 |
+| 4 | Derivados que dependen de `x0` calculados al leer | Sin recálculo en la base al llegar la gravimetría; los registros anteriores quedan al día | §15.3 |
+| 5 | Ingreso de telemetría y eventos en orden, de a uno | En paralelo, la primera telemetría de un lote se rechazaba por "lote inexistente" | §15.3 |
+| 6 | Sesión MQTT persistente en Node-RED | Con sesión limpia se perdía lo publicado mientras Node-RED estaba caído | §15.3 |
+| 7 | `sin_datos` y la alerta "Sin datos" solo con lote activo | Sin lote el equipo no envía telemetría (§10.1) y la alerta sonaría toda la noche | §15.3, §15.4 |
+| 8 | Dos usuarios de API (`grafana`, `tecnico`) | Grafana no debe poder cambiar la configuración del equipo | §15.3 |
+| 9 | Colección `rechazados` en la tabla y endpoint `/api/rechazados` | Ya se usaba en el texto; el tablero técnico la muestra | §15.2, §15.3 |
+| 10 | `/api/ultimo` devuelve una fila por equipo, con campos de alerta y `estado_panel` | Las alertas de Grafana necesitan valores numéricos por equipo | §15.3, §15.4 |
+| 11 | Imagen `grafana/grafana:13.3.0` en lugar de `grafana-oss` | `grafana-oss` dejó de publicarse en la 13.0 | §15.1 |
+| 12 | Lógica en `lib/secador.js`, colecciones creadas por Node-RED | Pruebas con `node --test`; no hace falta un script de inicialización aparte | §15.2, §15.3, §16.3 |
+| 13 | Usuarios y permisos de Grafana con un script | Grafana no los aprovisiona con archivos | §15.4 |

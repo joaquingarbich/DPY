@@ -1,0 +1,3 @@
+{
+  "broker": { "user": "${MQTT_USUARIO}", "password": "${MQTT_CLAVE}" }
+}

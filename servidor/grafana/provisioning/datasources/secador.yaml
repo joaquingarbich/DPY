@@ -1,0 +1,17 @@
+# Origen de datos: API de Node-RED con el complemento Infinity (§15.4).
+apiVersion: 1
+datasources:
+  - name: Secador API
+    uid: secador-api
+    type: yesoreyeram-infinity-datasource
+    access: proxy
+    isDefault: true
+    url: ${NODERED_URL}
+    basicAuth: true
+    basicAuthUser: grafana
+    jsonData:
+      auth_method: basicAuth
+      allowedHosts:
+        - ${NODERED_URL}
+    secureJsonData:
+      basicAuthPassword: ${API_GRAFANA_CLAVE}

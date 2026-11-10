@@ -1,0 +1,335 @@
+[
+  {
+    "id": "tab_secador",
+    "type": "tab",
+    "label": "Secador",
+    "info": "Flujos del servidor (§15.3). La lógica está en lib/secador.js; aquí solo se conecta MQTT y HTTP."
+  },
+  {
+    "id": "broker",
+    "type": "mqtt-broker",
+    "name": "Broker del secador",
+    "broker": "${MQTT_URL}",
+    "port": "",
+    "clientid": "secador-servidor",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": false,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "closeTopic": "",
+    "willTopic": "",
+    "credentials": {}
+  },
+  {
+    "id": "c1",
+    "type": "comment",
+    "z": "tab_secador",
+    "name": "Ingreso: validar → deduplicar → calcular → insertar",
+    "info": "",
+    "x": 170,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "in_tel",
+    "type": "mqtt in",
+    "z": "tab_secador",
+    "name": "telemetría",
+    "topic": "secador/+/telemetria",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 80,
+    "wires": [
+      [
+        "f_tel"
+      ]
+    ]
+  },
+  {
+    "id": "f_tel",
+    "type": "function",
+    "z": "tab_secador",
+    "name": "ingresar telemetría",
+    "func": "const r = await global.get('secador').ingresarTelemetria(msg.payload);\nif (!r.ok) node.warn(`rechazado: ${r.motivo}`);\nnode.status(r.ok\n  ? { fill: 'green', shape: 'dot', text: r.duplicado ? 'duplicado' : `${msg.payload.lote} seq ${msg.payload.seq}` }\n  : { fill: 'red', shape: 'ring', text: r.motivo });\nreturn null;",
+    "outputs": 0,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "c2",
+    "type": "comment",
+    "z": "tab_secador",
+    "name": "Eventos: guardar y actualizar el lote",
+    "info": "",
+    "x": 130,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "in_ev",
+    "type": "mqtt in",
+    "z": "tab_secador",
+    "name": "eventos",
+    "topic": "secador/+/evento",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 180,
+    "wires": [
+      [
+        "f_ev"
+      ]
+    ]
+  },
+  {
+    "id": "f_ev",
+    "type": "function",
+    "z": "tab_secador",
+    "name": "ingresar evento",
+    "func": "const r = await global.get('secador').ingresarEvento(msg.payload);\nif (!r.ok) node.warn(`evento rechazado: ${r.motivo}`);\nnode.status({ fill: r.ok ? 'blue' : 'red', shape: 'dot', text: `${msg.payload.tipo}` });\nreturn null;",
+    "outputs": 0,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "c3",
+    "type": "comment",
+    "z": "tab_secador",
+    "name": "API para Grafana y configuración (autenticación básica)",
+    "info": "",
+    "x": 200,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "http_0",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/lotes",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 280,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_1",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/series",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 320,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_2",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/ultimo",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 360,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_3",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/eventos",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 400,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_4",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/rechazados",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 440,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_5",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/export.csv",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 480,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_6",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/lotes/:id/config",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 520,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_7",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/lotes/:id/gravimetria/inicial",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 560,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "http_8",
+    "type": "http in",
+    "z": "tab_secador",
+    "name": "",
+    "url": "/api/lotes/:id/gravimetria/final",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 600,
+    "wires": [
+      [
+        "f_api"
+      ]
+    ]
+  },
+  {
+    "id": "f_api",
+    "type": "function",
+    "z": "tab_secador",
+    "name": "api",
+    "func": "const ruta = `${msg.req.method} ${msg.req.route.path}`;\nconst r = await global.get('secador').http(ruta, msg.req);\nmsg.statusCode = r.status;\nmsg.headers = r.headers;\nmsg.payload = r.body;\nconst config = r.mqtt ? { topic: r.mqtt.topic, payload: r.mqtt.payload, qos: r.mqtt.qos, retain: r.mqtt.retain } : null;\nreturn [msg, config];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 490,
+    "y": 440,
+    "wires": [
+      [
+        "resp"
+      ],
+      [
+        "out_cfg"
+      ]
+    ]
+  },
+  {
+    "id": "resp",
+    "type": "http response",
+    "z": "tab_secador",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 670,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "out_cfg",
+    "type": "mqtt out",
+    "z": "tab_secador",
+    "name": "secador/<eq>/config (retenido)",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker",
+    "x": 730,
+    "y": 460,
+    "wires": []
+  }
+]
