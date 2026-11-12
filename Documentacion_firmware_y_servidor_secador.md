@@ -603,8 +603,13 @@ avance = (m0 − masa_g) / (m0 − m_obj)
 
 Grafana sirve para mirar datos, pero no tiene formularios para cargarlos. Para el uso diario hay una página propia, servida por Node-RED (`servidor/nodered/publico/index.html`, sin dependencias, pensada para el celular). Usa la misma API:
 
-- **Vista del operario** (usuario `operario`, solo lectura): el estado en una palabra y con color, junto con la instrucción ("FIN: retire la bandeja. Mantenga el botón presionado 3 s para cerrar el lote"); el avance con una barra; la masa y su objetivo; la temperatura y el setpoint; las horas de secado; los últimos eventos con nombres legibles; y los pasos para iniciar y cerrar un lote. Se actualiza cada 30 s.
-- **Acciones del técnico** (usuario `tecnico`): resumen del lote, humedad inicial de laboratorio (en %), setpoint e intervalo, humedad final medida y descarga del CSV.
+- **Vista del operario** (usuario `operario`, solo lectura): el estado en una palabra y con color, junto con la instrucción ("FIN: retire la bandeja. Mantenga el botón presionado 3 s para cerrar el lote"); el avance con una barra; la masa y su objetivo; la temperatura y el setpoint; las horas de secado; dos gráficas del lote en curso (masa con la masa objetivo, temperatura de la cámara con el setpoint); los últimos eventos con nombres legibles; y los pasos para iniciar y cerrar un lote. Se actualiza cada 30 s.
+- **Tablero del técnico** (usuario `tecnico`, pestaña propia), con selector de lote y de rango (lote completo, 24 h, 6 h, 1 h):
+  - Indicadores: masa y masa perdida, avance, `X_bh`, `MR`, `ṁ` (último y promedio), η, `G_est`, duty, `T_cam` (media, mínima y máxima), `HR_cam`, horas de secado, % del tiempo en pausa, completitud de registros (recibidos / esperados según el intervalo), descartes del filtro, señal WiFi mínima y minutos sin datos.
+  - Gráficas, una magnitud por eje: masa y `m_obj`; `X_bh`; `MR`; temperaturas (cámara, entrada, colector, con el setpoint); humedades relativas (cámara, entrada); `G_est`; iluminancia; duty; `ṁ`; η; señal WiFi; descartes. Pasando el dedo o el puntero se ven los valores de cada instante.
+  - Todos los eventos del lote con nivel y datos, y los últimos mensajes rechazados.
+- **Acciones del técnico** (usuario `tecnico`): resumen del lote, humedad inicial de laboratorio (en %), setpoint, intervalo y humedad final objetivo (`xf`, 10 a 25 %), humedad final medida y descarga del CSV.
+- Las gráficas se dibujan en SVG dentro de la misma página, sin bibliotecas externas, con los datos de `GET /api/series`.
 - Los lotes se inician y se cierran en el secador, con el botón (§9.1). La página no lo reemplaza: muestra los pasos.
 - La página pide usuario y clave en su propio formulario y los envía como autenticación básica. Con el encabezado `X-Requested-With: secador-app`, la API responde 401 sin `WWW-Authenticate` para que el navegador no abra su propia ventana. `GET /api/yo` devuelve el rol.
 
@@ -688,3 +693,4 @@ Decisiones tomadas al escribir el código. Las secciones anteriores ya las inclu
 | 16 | El editor de Node-RED se desactiva si falta su clave | Que un `.env` incompleto no deje el editor abierto en internet | §15.1 |
 | 17 | Un equipo no puede escribir telemetría ni eventos en el lote de otro; el `eq` del lote no se reasigna | Aislamiento entre secadores | §15.3 |
 | 18 | `operario` y `tecnico` usan la misma clave en `/app/` y en Grafana | Una sola clave por persona | §15.4, §15.5 |
+| 19 | Gráficas en `/app/` para el operario; pestaña "Tablero" del técnico con indicadores, gráficas, eventos y rechazados; `xf` editable desde la página | Ver los datos sin entrar a Grafana, cada rol con lo que necesita | §15.5 |

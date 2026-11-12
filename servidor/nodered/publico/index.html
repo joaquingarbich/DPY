@@ -9,18 +9,20 @@
     --fondo: #f4f2ee; --tarjeta: #ffffff; --texto: #1d1d1b; --suave: #6b6a65; --borde: #e2dfd8;
     --acento: #c2620a; --ok: #2f7d32; --pausa: #33658a; --alerta: #c2620a; --peligro: #b3261e; --neutro: #77746c;
     --sombra: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --fondo: #151513; --tarjeta: #1f1f1c; --texto: #f1efe9; --suave: #a3a097; --borde: #33322e;
       --acento: #f0923a; --ok: #4caf50; --pausa: #5b9bd5; --alerta: #f0923a; --peligro: #ef5350; --neutro: #8f8c84;
       --sombra: none;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--fondo); color: var(--texto);
          font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
   h1 { font-size: 18px; margin: 0; }
   h2 { font-size: 15px; margin: 0 0 12px; color: var(--suave); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
   .barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -71,6 +73,40 @@
   table.resumen td:last-child { text-align: right; font-weight: 600; }
   .msj { margin-top: 10px; font-size: 14px; }
   .msj.bien { color: var(--ok); } .msj.mal { color: var(--peligro); }
+  #v-secador, #v-acciones { max-width: 760px; margin: 0 auto; }
+
+  /* Gráficas: paleta categórica validada (orden fijo), una magnitud por eje */
+  .graficos { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 900px) { #v-tablero .graficos { grid-template-columns: 1fr 1fr; } }
+  .graficos .tarjeta { margin: 0; min-width: 0; }
+  .grafico { position: relative; }
+  .grafico svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+  .grafico .eje { fill: var(--suave); font-size: 11px; }
+  .grafico .rejilla-g { stroke: var(--borde); stroke-width: 1; }
+  .grafico .serie { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .grafico .ref { fill: none; stroke: var(--suave); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .grafico .cursor { stroke: var(--suave); stroke-width: 1; }
+  .grafico .vacio { fill: var(--suave); font-size: 13px; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--suave); margin: -4px 0 6px; }
+  .leyenda span::before { content: ""; display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--c); vertical-align: middle; margin-right: 6px; }
+  .leyenda span.ref::before { border-top: 2px dashed var(--suave); }
+  .tip { position: absolute; top: 0; pointer-events: none; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px;
+         padding: 6px 8px; font-size: 12px; box-shadow: var(--sombra); white-space: nowrap; z-index: 2; }
+  .tip b { display: block; margin-bottom: 2px; }
+  .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 5px; font-style: normal; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 10px 12px; }
+  .kpi .k { font-size: 12px; color: var(--suave); }
+  .graficos h2 { text-transform: none; letter-spacing: 0; font-size: 14px; }
+  .kpi .v { font-size: 22px; font-weight: 700; }
+  .kpi .v small { font-size: 13px; font-weight: 500; color: var(--suave); }
+  .kpi .s { font-size: 12px; color: var(--suave); }
+  .tabla-scroll { overflow-x: auto; max-height: 360px; overflow-y: auto; }
+  table.lista { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.lista th { text-align: left; color: var(--suave); font-weight: 600; position: sticky; top: 0; background: var(--tarjeta); }
+  table.lista th, table.lista td { padding: 6px 8px 6px 0; border-top: 1px solid var(--borde); vertical-align: top; }
+  table.lista td.datos { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--suave); word-break: break-all; }
+  .critico { color: var(--peligro); font-weight: 700; }
   .login { max-width: 360px; margin: 12vh auto 0; }
   .login input { width: 100%; margin-bottom: 12px; }
   .login button { width: 100%; }
@@ -102,7 +138,17 @@
 
     <div class="pestanas oculto" id="pestanas" role="tablist">
       <button class="activa" data-vista="secador" role="tab">Secador</button>
+      <button data-vista="tablero" role="tab">Tablero</button>
       <button data-vista="acciones" role="tab">Acciones del técnico</button>
+    </div>
+
+    <div class="barra oculto" id="barra-lote">
+      <select id="sel-lote" aria-label="Lote" style="flex:1"></select>
+      <select id="sel-rango" aria-label="Rango de tiempo">
+        <option value="">Lote completo</option><option value="24">Últimas 24 h</option>
+        <option value="6">Últimas 6 h</option><option value="1">Última hora</option>
+      </select>
+      <button class="secundario" id="b-actualizar">Actualizar</button>
     </div>
 
     <!-- Vista del operario -->
@@ -121,6 +167,8 @@
         <div class="tarjeta dato"><h2>Secando hace</h2><div class="valor" id="horas">—</div><div class="sub" id="inicio"></div></div>
         <div class="tarjeta dato ancho-movil"><h2>Lote</h2><div class="valor" id="lote">—</div><div class="sub" id="masa"></div></div>
       </div>
+
+      <div class="graficos" id="g-operario" style="margin-bottom:14px"></div>
 
       <div class="tarjeta">
         <h2>Últimos eventos</h2>
@@ -142,11 +190,25 @@
       <p class="suave" id="actualizado"></p>
     </div>
 
+    <!-- Tablero del técnico -->
+    <div id="v-tablero" class="oculto">
+      <div class="kpis" id="kpis"></div>
+      <div class="graficos" id="g-tecnico"></div>
+      <div class="tarjeta" style="margin-top:14px">
+        <h2>Eventos del lote</h2>
+        <div class="tabla-scroll"><table class="lista" id="t-eventos"></table></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Mensajes rechazados</h2>
+        <div class="tabla-scroll"><table class="lista" id="t-rechazados"></table></div>
+      </div>
+      <p class="suave" id="tablero-act"></p>
+    </div>
+
     <!-- Acciones del técnico -->
     <div id="v-acciones" class="oculto">
       <div class="tarjeta">
         <h2>Lote</h2>
-        <select id="sel-lote" aria-label="Lote" style="width:100%;margin-bottom:12px"></select>
         <table class="resumen" id="resumen"></table>
       </div>
 
@@ -166,6 +228,7 @@
           <div><label for="sp-in">Setpoint de la cámara (°C)</label><input id="sp-in" type="number" step="0.5" min="45" max="65" required></div>
           <div><label for="int-in">Intervalo de registro</label>
             <select id="int-in"><option value="60">1 min</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option></select></div>
+          <div><label for="xf-obj">Humedad final objetivo (%)</label><input id="xf-obj" type="number" step="0.1" min="10" max="25" required></div>
           <button type="submit">Enviar al equipo</button>
         </div>
         <div class="msj" id="m-cfg"></div>
@@ -248,16 +311,28 @@ async function cargarEquipos() {
   sel.value = eq;
   sel.classList.toggle('oculto', sel.options.length < 2);
 }
-$('sel-eq').addEventListener('change', (e) => { eq = e.target.value; guardar('eq', eq); refrescar(); });
+$('sel-eq').addEventListener('change', async (e) => {
+  eq = e.target.value; guardar('eq', eq);
+  if (vista !== 'secador') await cargarLotes();
+  refrescar();
+});
 
+let vista = 'secador';
 for (const b of document.querySelectorAll('#pestanas button')) {
-  b.addEventListener('click', () => {
+  b.addEventListener('click', async () => {
+    vista = b.dataset.vista;
     document.querySelectorAll('#pestanas button').forEach((x) => x.classList.toggle('activa', x === b));
-    $('v-secador').classList.toggle('oculto', b.dataset.vista !== 'secador');
-    $('v-acciones').classList.toggle('oculto', b.dataset.vista !== 'acciones');
-    if (b.dataset.vista === 'acciones') cargarLotes();
+    for (const v of ['secador', 'tablero', 'acciones']) $('v-' + v).classList.toggle('oculto', v !== vista);
+    $('barra-lote').classList.toggle('oculto', vista === 'secador');
+    $('sel-rango').classList.toggle('oculto', vista !== 'tablero');
+    if (vista === 'secador') return refrescar();
+    await cargarLotes();
+    if (vista === 'tablero') await cargarTablero();
   });
 }
+const errTablero = (err) => { if (err.message !== '401') $('tablero-act').textContent = 'No se pudo actualizar: ' + err.message; };
+$('sel-rango').addEventListener('change', () => cargarTablero().catch(errTablero));
+$('b-actualizar').addEventListener('click', () => (vista === 'tablero' ? cargarTablero().catch(errTablero) : cargarLotes()));
 
 // ---------------------------------------------------------------- vista del operario
 const ESTADOS = {
@@ -283,10 +358,13 @@ const hora = (ts) => new Date(ts).toLocaleString('es-PE', { day: '2-digit', mont
 
 async function refrescar() {
   if (!auth) return;
+  if (vista === 'tablero') return cargarTablero().catch(errTablero);
+  if (vista !== 'secador') return;
   try {
     const [u] = await api('/ultimo?eq=' + encodeURIComponent(eq));
     ultimo = u || null;
     pintar(u);
+    await graficosOperario(u);
     const ev = await api(`/eventos?eq=${encodeURIComponent(eq)}&limite=6`);
     const ul = $('eventos');
     ul.innerHTML = '';
@@ -331,6 +409,232 @@ function pintar(u) {
   $('ayuda').open = !activo;
 }
 
+// ---------------------------------------------------------------- gráficas (SVG, sin bibliotecas)
+// Cada gráfica: una sola magnitud en el eje Y. series: [campo, nombre, color 1-4, factor];
+// refs: líneas de referencia punteadas (setpoint, masa objetivo).
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, at = {}, padre) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); if (padre) padre.append(e); return e; };
+const pasoLindo = (x) => { const p = 10 ** Math.floor(Math.log10(x)), f = x / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; };
+const horaCorta = (t, largo) => new Date(t).toLocaleString('es-PE', largo
+  ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' } : { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).replace(',', '');
+
+// Crea las tarjetas (una vez) y devuelve un mapa id -> contenedor.
+function montarGraficos(cont, defs) {
+  if (cont.childElementCount) return;
+  for (const d of defs) {
+    const t = document.createElement('div'); t.className = 'tarjeta';
+    const h = document.createElement('h2'); h.textContent = d.titulo + (d.unidad ? ` (${d.unidad})` : '');
+    t.append(h);
+    const entradas = [...d.series.map((s) => [s[1], s[2]]), ...(d.refs || []).map((r) => [r[1], 0])];
+    if (entradas.length > 1) {
+      const ley = document.createElement('div'); ley.className = 'leyenda';
+      for (const [nombre, c] of entradas) {
+        const s = document.createElement('span'); s.textContent = nombre;
+        if (c) s.style.setProperty('--c', `var(--s${c})`); else s.className = 'ref';
+        ley.append(s);
+      }
+      t.append(ley);
+    }
+    const g = document.createElement('div'); g.className = 'grafico'; g.id = d.id; g._def = d;
+    t.append(g); cont.append(t);
+  }
+}
+
+function dibujar(g, filas) {
+  if (filas) g._filas = filas;
+  const d = g._def, datos = g._filas || [];
+  const W = Math.max(g.clientWidth, 260), H = 180, m = { l: 46, r: 10, t: 8, b: 22 };
+  g.innerHTML = '';
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': d.titulo }, g);
+  const lineas = [...d.series.map(([c, n, col, f = 1]) => ({ c, n, col, f })), ...(d.refs || []).map(([c, n]) => ({ c, n, f: 1, ref: true }))];
+  // ponytail: un punto por píxel como máximo; muestreo simple, no agrega mín/máx por píxel.
+  const k = Math.max(1, Math.ceil(datos.length / (W - m.l - m.r)));
+  const pts = datos.filter((_, i) => i % k === 0 || i === datos.length - 1).map((r) => {
+    const o = { t: Date.parse(r.ts) };
+    for (const l of lineas) o[l.c] = r[l.c] === null || r[l.c] === undefined ? null : r[l.c] * l.f;
+    return o;
+  });
+  const vals = pts.flatMap((p) => lineas.map((l) => p[l.c])).filter((v) => v !== null && Number.isFinite(v));
+  if (!pts.length || !vals.length) {
+    el('text', { x: W / 2, y: H / 2, 'text-anchor': 'middle', class: 'vacio' }, svg).textContent = d.vacio || 'Sin datos en este rango';
+    return;
+  }
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const paso = pasoLindo((hi - lo) / 4);
+  lo = Math.floor(lo / paso) * paso; hi = Math.ceil(hi / paso) * paso;
+  const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, t0 + 60000);
+  const X = (t) => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r);
+  const Y = (v) => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  const decEje = paso < 0.01 ? 3 : paso < 0.1 ? 2 : paso < 1 ? 1 : 0;
+  for (let v = lo; v <= hi + paso / 2; v += paso) {
+    el('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), class: 'rejilla-g' }, svg);
+    el('text', { x: m.l - 6, y: Y(v) + 4, 'text-anchor': 'end', class: 'eje' }, svg).textContent = num(v, decEje);
+  }
+  const largo = t1 - t0 > 20 * 3.6e6, nX = Math.max(2, Math.min(5, Math.floor((W - m.l) / (largo ? 110 : 70))));
+  for (let i = 0; i < nX; i++) {
+    const t = t0 + (t1 - t0) * i / (nX - 1);
+    el('text', { x: X(t), y: H - 6, 'text-anchor': i === 0 ? 'start' : i === nX - 1 ? 'end' : 'middle', class: 'eje' }, svg).textContent = horaCorta(t, largo);
+  }
+  for (const l of lineas) {
+    let dd = '', pluma = 'M';
+    for (const p of pts) {
+      if (p[l.c] === null) { pluma = 'M'; continue; }
+      dd += `${pluma}${X(p.t).toFixed(1)},${Y(p[l.c]).toFixed(1)}`; pluma = 'L';
+    }
+    const path = el('path', { d: dd, class: l.ref ? 'ref' : 'serie' }, svg);
+    if (!l.ref) path.style.stroke = `var(--s${l.col})`;
+  }
+  // Cursor y valores al pasar el puntero o el dedo.
+  const cursor = el('line', { y1: m.t, y2: H - m.b, class: 'cursor', visibility: 'hidden' }, svg);
+  const puntos = lineas.filter((l) => !l.ref).map((l) => { const c = el('circle', { r: 4, visibility: 'hidden' }, svg); c.style.fill = `var(--s${l.col})`; c.style.stroke = 'var(--tarjeta)'; c.style.strokeWidth = 2; return c; });
+  const tip = document.createElement('div'); tip.className = 'tip oculto'; g.append(tip);
+  const dec = d.dec ?? 1;
+  const mover = (ev) => {
+    const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * W / r.width;
+    const t = t0 + (x - m.l) / (W - m.l - m.r) * (t1 - t0);
+    let a = 0, b = pts.length - 1;
+    while (b - a > 1) { const c = (a + b) >> 1; if (pts[c].t < t) a = c; else b = c; }
+    const p = Math.abs(pts[a].t - t) < Math.abs(pts[b].t - t) ? pts[a] : pts[b];
+    const px = X(p.t);
+    cursor.setAttribute('x1', px); cursor.setAttribute('x2', px); cursor.setAttribute('visibility', 'visible');
+    lineas.filter((l) => !l.ref).forEach((l, i) => {
+      const v = p[l.c];
+      puntos[i].setAttribute('visibility', v === null ? 'hidden' : 'visible');
+      if (v !== null) { puntos[i].setAttribute('cx', px); puntos[i].setAttribute('cy', Y(v)); }
+    });
+    tip.innerHTML = '';
+    const b0 = document.createElement('b'); b0.textContent = hora(p.t); tip.append(b0);
+    for (const l of lineas) {
+      const fila = document.createElement('div');
+      const i = document.createElement('i'); i.style.setProperty('--c', l.ref ? 'var(--suave)' : `var(--s${l.col})`);
+      fila.append(i, `${l.n}: ${num(p[l.c], dec)}${d.unidad ? ' ' + d.unidad : ''}`);
+      tip.append(fila);
+    }
+    tip.classList.remove('oculto');
+    const ancho = g.clientWidth, pxPant = px * ancho / W;
+    tip.style.left = (pxPant > ancho / 2 ? pxPant - tip.offsetWidth - 10 : pxPant + 10) + 'px';
+  };
+  svg.addEventListener('pointermove', mover);
+  svg.addEventListener('pointerdown', mover);
+  svg.addEventListener('pointerleave', () => { tip.classList.add('oculto'); cursor.setAttribute('visibility', 'hidden'); puntos.forEach((c) => c.setAttribute('visibility', 'hidden')); });
+}
+
+let anchoPrevio = innerWidth;
+addEventListener('resize', () => {
+  clearTimeout(dibujar._t);
+  dibujar._t = setTimeout(() => {
+    if (innerWidth === anchoPrevio) return;
+    anchoPrevio = innerWidth;
+    document.querySelectorAll('.grafico').forEach((g) => { if (g._filas && g.offsetParent) dibujar(g); });
+  }, 150);
+});
+
+const camposDe = (defs) => [...new Set(defs.flatMap((d) => [...d.series.map((s) => s[0]), ...(d.refs || []).map((r) => r[0])]))];
+function pintarGraficos(cont, filas) { for (const g of cont.querySelectorAll('.grafico')) dibujar(g, filas); }
+
+// ---------------------------------------------------------------- gráficas del operario
+const G_OPERARIO = [
+  { id: 'go-masa', titulo: 'Masa del mango', unidad: 'g', dec: 0, series: [['masa_g', 'Masa', 1]], refs: [['m_obj', 'Objetivo']] },
+  { id: 'go-temp', titulo: 'Temperatura de la cámara', unidad: '°C', dec: 1, series: [['t_cam', 'Cámara', 2]], refs: [['setpoint', 'Objetivo']] },
+];
+async function graficosOperario(u) {
+  const cont = $('g-operario');
+  const hay = u && u.lote && u.lote_activo;
+  cont.classList.toggle('oculto', !hay);
+  if (!hay) return;
+  montarGraficos(cont, G_OPERARIO);
+  pintarGraficos(cont, await api(`/series?lote=${encodeURIComponent(u.lote)}&campos=${camposDe(G_OPERARIO)}`));
+}
+
+// ---------------------------------------------------------------- tablero del técnico
+const G_TECNICO = [
+  { id: 'gt-masa', titulo: 'Masa', unidad: 'g', dec: 0, series: [['masa_g', 'Masa', 1]], refs: [['m_obj', 'Masa objetivo']] },
+  { id: 'gt-xbh', titulo: 'Humedad del producto, base húmeda', unidad: '%', dec: 1, series: [['x_bh', 'X bh', 1, 100]], vacio: 'Aparece al cargar la humedad inicial de laboratorio' },
+  { id: 'gt-mr', titulo: 'Razón de humedad MR', unidad: '', dec: 3, series: [['mr', 'MR', 1]], vacio: 'Aparece al cargar la humedad inicial de laboratorio' },
+  { id: 'gt-temp', titulo: 'Temperaturas', unidad: '°C', dec: 1, series: [['t_cam', 'Cámara', 1], ['t_ent', 'Entrada', 2], ['t_col', 'Colector', 3]], refs: [['setpoint', 'Setpoint']] },
+  { id: 'gt-hr', titulo: 'Humedad relativa', unidad: '%', dec: 1, series: [['hr_cam', 'Cámara', 1], ['hr_ent', 'Entrada', 2]] },
+  { id: 'gt-g', titulo: 'Irradiancia estimada G_est', unidad: 'W/m²', dec: 0, series: [['g_est', 'G_est', 4]] },
+  { id: 'gt-lux', titulo: 'Iluminancia', unidad: 'lux', dec: 0, series: [['luz_lux', 'Luz', 4]] },
+  { id: 'gt-duty', titulo: 'Ventilador (duty)', unidad: '%', dec: 0, series: [['duty', 'Duty', 1]] },
+  { id: 'gt-mdot', titulo: 'Caudal de aire ṁ', unidad: 'kg/s', dec: 4, series: [['m_dot', 'ṁ', 1]] },
+  { id: 'gt-eta', titulo: 'Eficiencia del colector η', unidad: '%', dec: 1, series: [['eta', 'η', 3, 100]] },
+  { id: 'gt-senal', titulo: 'Señal WiFi', unidad: 'dBm', dec: 0, series: [['senal_dbm', 'Señal', 1]] },
+  { id: 'gt-desc', titulo: 'Lecturas descartadas por el filtro', unidad: '', dec: 0, series: [['n_descartes', 'Descartes', 2]] },
+];
+const CAMPOS_TABLERO = [...new Set([...camposDe(G_TECNICO), 'pausa', 'seq'])];
+
+function kpi(k, v, u, s) {
+  const d = document.createElement('div'); d.className = 'kpi';
+  const a = document.createElement('div'); a.className = 'k'; a.textContent = k;
+  const b = document.createElement('div'); b.className = 'v'; b.textContent = v;
+  if (u && v !== '—') { const sm = document.createElement('small'); sm.textContent = ' ' + u; b.append(sm); }
+  d.append(a, b);
+  if (s) { const c = document.createElement('div'); c.className = 's'; c.textContent = s; d.append(c); }
+  return d;
+}
+const media = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+const col = (filas, c) => filas.map((f) => f[c]).filter((v) => v !== null && v !== undefined);
+
+async function cargarTablero() {
+  const l = loteSel();
+  if (!l) return;
+  const h = Number($('sel-rango').value);
+  const desde = h ? `&desde=${Date.now() - h * 3.6e6}` : '';
+  const [filas, ev, rech, [u]] = await Promise.all([
+    api(`/series?lote=${encodeURIComponent(l.id)}&campos=${CAMPOS_TABLERO}${desde}`),
+    api(`/eventos?lote=${encodeURIComponent(l.id)}&limite=300`),
+    api(`/rechazados?desde=${Date.now() - 7 * 864e5}`),
+    api('/ultimo?eq=' + encodeURIComponent(eq)),
+  ]);
+  montarGraficos($('g-tecnico'), G_TECNICO);
+  pintarGraficos($('g-tecnico'), filas);
+
+  // Indicadores sobre el rango elegido.
+  const ult = filas[filas.length - 1] || {}, pri = filas[0] || {};
+  const tcam = col(filas, 't_cam'), mdot = col(filas, 'm_dot'), eta = col(filas, 'eta'), sen = col(filas, 'senal_dbm');
+  const horas = filas.length > 1 ? (Date.parse(ult.ts) - Date.parse(pri.ts)) / 3.6e6 : 0;
+  const esperados = horas > 0 ? Math.floor(horas * 3600 / (l.intervalo_s || 60)) + 1 : filas.length;
+  const pausas = filas.filter((f) => f.pausa).length;
+  const actual = u && u.lote === l.id;
+  const pct = (v, d = 1) => (v === null || v === undefined ? '—' : num(v * 100, d));
+  const k = $('kpis'); k.innerHTML = '';
+  k.append(
+    kpi('Masa', num(ult.masa_g), 'g', l.m_obj ? `Objetivo ${num(l.m_obj)} g` : 'Objetivo pendiente de x0'),
+    kpi('Masa perdida', filas.length ? num((l.m0 ?? pri.masa_g) - ult.masa_g) : '—', 'g', l.m0 ? `De ${num(l.m0)} g iniciales` : ''),
+    kpi('Avance', pct(ult.avance, 0), '%'),
+    kpi('Humedad X bh', pct(ult.x_bh), '%', l.x0 ? `Inicial ${num(l.x0 * 100, 1)} %${l.x0_lab ? '' : ' (provisional)'}` : ''),
+    kpi('MR', ult.mr === null || ult.mr === undefined ? '—' : num(ult.mr, 3)),
+    kpi('Caudal ṁ', num(ult.m_dot, 4), 'kg/s', mdot.length ? `Promedio ${num(media(mdot), 4)}` : ''),
+    kpi('Eficiencia η', pct(ult.eta), '%', eta.length ? `Promedio ${num(media(eta) * 100, 1)} %` : ''),
+    kpi('G_est', num(ult.g_est), 'W/m²'),
+    kpi('Duty', num(ult.duty), '%'),
+    kpi('T cámara', num(ult.t_cam, 1), '°C', tcam.length ? `Media ${num(media(tcam), 1)} · ${num(Math.min(...tcam), 1)}–${num(Math.max(...tcam), 1)}` : ''),
+    kpi('HR cámara', num(ult.hr_cam, 1), '%'),
+    kpi('Horas en el rango', num(horas, 1), 'h', l.inicio_operacion ? 'Lote desde ' + hora(l.inicio_operacion) : ''),
+    kpi('Tiempo en pausa', filas.length ? num(pausas / filas.length * 100, 0) : '—', '%'),
+    kpi('Completitud', filas.length ? num(Math.min(filas.length / esperados, 1) * 100, 1) : '—', '%', `${filas.length} de ${esperados} registros`),
+    kpi('Descartes', num(col(filas, 'n_descartes').reduce((a, b) => a + b, 0)), '', 'Lecturas rechazadas por el filtro'),
+    kpi('Señal mínima', sen.length ? num(Math.min(...sen)) : '—', 'dBm', ult.senal_dbm ? `Actual ${num(ult.senal_dbm)} dBm` : ''),
+    kpi('Sin datos', actual ? num(u.min_sin_datos, 1) : '—', 'min', actual ? (u.en_linea ? 'En línea' : 'Fuera de línea') : 'Lote no actual'),
+  );
+
+  // Eventos y rechazados.
+  const te = $('t-eventos'); te.innerHTML = '<tr><th>Hora</th><th>Evento</th><th>Nivel</th><th>Datos</th></tr>';
+  for (const e of ev) {
+    const tr = te.insertRow();
+    tr.insertCell().textContent = hora(e.ts);
+    tr.insertCell().textContent = EVENTOS[e.tipo] || e.tipo;
+    const n = tr.insertCell(); n.textContent = e.nivel || ''; if (e.nivel === 'critico') n.className = 'critico';
+    const dt = tr.insertCell(); dt.className = 'datos'; dt.textContent = e.datos && e.datos !== '{}' && e.datos !== 'null' ? e.datos : '';
+  }
+  if (!ev.length) te.insertRow().insertCell().textContent = 'Sin eventos.';
+  const tr0 = $('t-rechazados'); tr0.innerHTML = '<tr><th>Recibido</th><th>Motivo</th></tr>';
+  for (const r of rech.slice(0, 100)) { const tr = tr0.insertRow(); tr.insertCell().textContent = hora(r.recibido); tr.insertCell().textContent = r.motivo; }
+  if (!rech.length) tr0.insertRow().insertCell().textContent = 'Ningún mensaje rechazado en los últimos 7 días.';
+  $('tablero-act').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-PE') + ' · se actualiza cada 30 s';
+}
+
 // ---------------------------------------------------------------- acciones del técnico
 let lotes = [];
 const NOMBRE_ESTADO = { carga: 'cargando', operacion: 'secando', fin_ciclo: 'fin de ciclo', modo_seguro: 'modo seguro', cerrado: 'cerrado', cancelado: 'cancelado' };
@@ -345,7 +649,7 @@ async function cargarLotes() {
   sel.value = lotes.some((l) => l.id === previo) ? previo : (lotes[0] ? lotes[0].id : '');
   mostrarLote();
 }
-$('sel-lote').addEventListener('change', mostrarLote);
+$('sel-lote').addEventListener('change', () => { mostrarLote(); if (vista === 'tablero') cargarTablero().catch(errTablero); });
 
 function loteSel() { return lotes.find((l) => l.id === $('sel-lote').value); }
 
@@ -364,7 +668,7 @@ function mostrarLote() {
   ] : [];
   const t = $('resumen'); t.innerHTML = '';
   for (const [k, v] of filas) { const tr = t.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
-  if (l) { $('sp-in').value = l.setpoint ?? 60; $('int-in').value = String(l.intervalo_s ?? 60); }
+  if (l) { $('sp-in').value = l.setpoint ?? 60; $('int-in').value = String(l.intervalo_s ?? 60); $('xf-obj').value = l.xf ? Math.round(l.xf * 1000) / 10 : 17; }
   for (const f of ['f-x0', 'f-cfg', 'f-xf']) $(f).querySelector('button').disabled = !l;
   $('b-csv').disabled = !l;
 }
@@ -394,7 +698,7 @@ $('f-cfg').addEventListener('submit', (e) => {
   e.preventDefault();
   const l = loteSel();
   enviar('f-cfg', 'm-cfg', `/lotes/${encodeURIComponent(l.id)}/config`,
-    { setpoint: Number($('sp-in').value), intervalo_s: Number($('int-in').value) },
+    { setpoint: Number($('sp-in').value), intervalo_s: Number($('int-in').value), xf: Math.round(Number($('xf-obj').value) * 10) / 1000 },
     'Enviado. Si el secador está sin red, lo recibe al reconectarse.');
 });
 $('f-xf').addEventListener('submit', (e) => {

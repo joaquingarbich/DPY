@@ -59,7 +59,7 @@ El **avance** (%) aparece cuando el técnico carga la humedad de laboratorio, un
 
 ## 2. Técnico
 
-Entre a `/app/` con el usuario `tecnico`. La pestaña **Acciones del técnico** tiene todo lo que se carga a mano.
+Entre a `/app/` con el usuario `tecnico`. La pestaña **Tablero** muestra los indicadores, las gráficas, los eventos y los mensajes rechazados del lote elegido. La pestaña **Acciones del técnico** tiene todo lo que se carga a mano.
 
 ### 2.1 Humedad inicial de laboratorio (cada lote)
 
@@ -75,6 +75,7 @@ Entre a `/app/` con el usuario `tecnico`. La pestaña **Acciones del técnico** 
 |---|---|
 | **Setpoint de la cámara** (45 a 65 °C) | Para probar otra temperatura de secado |
 | **Intervalo de registro** (1 a 5 min) | Normalmente 1 min |
+| **Humedad final objetivo** (10 a 25 %) | Normalmente 17 %. Cambia la masa objetivo y, con ella, el fin de ciclo |
 | **Humedad final medida** | Al terminar, con la gravimetría del producto seco. Solo queda guardada para el informe |
 | **Descargar CSV** | Para el informe: todos los registros del lote con los valores calculados |
 
