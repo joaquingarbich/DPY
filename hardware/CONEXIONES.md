@@ -45,8 +45,25 @@ Cómo conectar los sensores, la microSD, el ventilador y la alimentación al **E
 
 - **Ajuste el buck a 5,0 V con un multímetro ANTES de conectar el ESP32.** Los módulos LM2596 vienen ajustados a cualquier valor, y 12 V en VIN quema la placa.
 - Todos los sensores van a **3V3** (no a 5 V): los pines del ESP32 no toleran 5 V. La única excepción es el módulo microSD **con regulador**; ver 4.5.
-- El regulador de 3,3 V de la placa entrega de sobra para todos los sensores (unos 150 mA en total).
+- El regulador de 3,3 V de la placa entrega de sobra para todos los sensores (unos 150 mA en el peor caso, con la microSD escribiendo).
 - Mientras se prueba en mesa, el ESP32 puede alimentarse solo por USB. El ventilador necesita los 12 V aparte, **con la GND unida a la del ESP32**.
+
+### 2.1 Consumo estimado
+
+Valores típicos, medidos del lado de 12 V. **Confírmelos con un multímetro en serie después del fusible**, en espera (con WiFi) y en operación con el ventilador al 100 %.
+
+| Componente | Potencia | Horas/día | Energía/día |
+|---|---|---|---|
+| ESP32 con WiFi siempre conectado (100–150 mA a 5 V; picos de ~300 mA al transmitir) | 0,5–0,75 W | 24 | 12–18 Wh |
+| Sensores y microSD (10–20 mA a 3,3 V; la microSD tiene picos breves de ~100 mA al escribir) | < 0,1 W | 24 | ~2 Wh |
+| Pérdidas del buck (~85 % de eficiencia) | 0,15–0,2 W | 24 | 4–5 Wh |
+| Ventilador de 80 mm, 12 V, común (0,08–0,15 A al 100 %; < 0,3 W al 30 %) | 1–1,8 W | ~8 (solo con sol) | 4–10 Wh |
+| **Total** | **pico 0,3–0,4 A** | | **~25–35 Wh/día (2–3 Ah a 12 V)** |
+
+- Lo que más consume es el **ESP32**, porque el WiFi está encendido las 24 h. De noche y en pausa, el MOSFET apaga del todo el ventilador.
+- Con un ventilador de **alto caudal** (0,3–0,5 A, tipo Delta), el total sube a ~50–70 Wh/día. El fusible de 2 A sigue sirviendo.
+- **Batería:** 12 V 7 Ah (plomo-ácido, usando el 50 %) ≈ 1 día de autonomía; 12 Ah ≈ 2 días sin sol.
+- **Panel:** con ~5,5 horas de sol pleno al día (Piura) y 30 % de pérdidas, alcanza con ~10 W. Un panel de **20 W** con un regulador PWM pequeño deja margen.
 
 ---
 
