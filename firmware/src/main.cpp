@@ -129,8 +129,11 @@ static void tAdquisicion(void*) {
     xSemaphoreGive(mtxLectura);
 
     xTaskNotifyGive(hControl);
-    esp_task_wdt_reset();
-    vTaskDelayUntil(&ultimo, pdMS_TO_TICKS(T_ADQ_S * 1000));
+    // 60 s supera el plazo del watchdog (30 s): se espera en tramos de 5 s.
+    for (uint32_t i = 0; i < T_ADQ_S / 5; i++) {
+      esp_task_wdt_reset();
+      vTaskDelayUntil(&ultimo, pdMS_TO_TICKS(5000));
+    }
   }
 }
 

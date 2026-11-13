@@ -32,7 +32,7 @@ cd servidor
 npm test                                         # 25 pruebas node:test con MongoDB 8.0 real en memoria
 node --test --test-name-pattern "gravimetría"    # filtrar por nombre
 npm run dev        # MongoDB en memoria + broker aedes (1883) + Node-RED (1880) + Grafana (3000, si está instalado con brew)
-npm run simular    # otra terminal: simula el ESP32 (lote L-04, 20 h de datos y luego uno por minuto); --horas N --lote L-05 --fin
+npm run simular    # otra terminal: simula el ESP32 (lote L-04, 20 h de datos y luego uno cada 10 min); --horas N --lote L-05 --fin
 python3 grafana/generar_tableros.py              # regenera dashboards/*.json (no editar los JSON a mano)
 OPERARIO_CLAVE=op-dev-123 TECNICO_CLAVE=tec-dev-123 node grafana/configurar-equipos.js   # usuarios/equipos de Grafana en local
 npm run verificar-nube [-- --escuchar 120]   # con servidor/.env: crea la base en Atlas (prepararBase), prueba HiveMQ, escucha secador/#
@@ -53,7 +53,7 @@ Los datos de `npm run dev` viven en memoria. Producción usa `docker compose up 
 
 - `filtros`, `control_pi`, `fin_ciclo`, `registro_json` y `estados` no incluyen Arduino. Compilan en el entorno `native` (`build_src_filter` en `platformio.ini`) y son lo único que tiene pruebas. Toda lógica nueva que se pueda probar va en estos módulos.
 - `estados.cpp` es la máquina de estados (ESPERA → CARGA → OPERACION → FIN_CICLO, más MODO_SEGURO). Recibe una `EntradaControl` y devuelve `SalidaControl`: duty y eventos. **No hace efectos**: `main.cpp::acciones()` aplica cada evento (tara, NVS, microSD, publicar).
-- `main.cpp` contiene los cuerpos de las 4 tareas FreeRTOS. Núcleo 1: `tAdquisicion` cada 10 s → notifica a `tControl`; `tRegistro` alineado al minuto UTC. Núcleo 0: `tComunicacion`. El botón y el LED van en un `esp_timer` de 10 ms; la consola serie, en `loop()`. Los recursos compartidos están en `globales.h`, con orden de bloqueo `mtxLectura` → `mtxLote`.
+- `main.cpp` contiene los cuerpos de las 4 tareas FreeRTOS. Núcleo 1: `tAdquisicion` cada 60 s (todos los sensores, balanza incluida) → notifica a `tControl`; `tRegistro` cada 10 min por defecto, alineado en UTC. Núcleo 0: `tComunicacion`. El botón y el LED van en un `esp_timer` de 10 ms; la consola serie, en `loop()`. Los recursos compartidos están en `globales.h`, con orden de bloqueo `mtxLectura` → `mtxLote`.
 - **La microSD manda.** `tRegistro` escribe cada registro en `/lotes/<lote>.jsonl`. `tComunicacion` **siempre lee de la microSD** (lo nuevo y lo pendiente por el mismo camino), con una ventana de 10 mensajes QoS 1. Con cada PUBACK avanza `/lotes/<lote>.ptr`. `qRegistros` solo se usa si falla la microSD.
 - MQTT usa el cliente de ESP-IDF (`mqtt_client.h`), no PubSubClient, porque hacen falta QoS 1, el `msg_id` del PUBACK, TLS y última voluntad. `Enlace` es una interfaz abstracta para poder cambiar WiFi por un módulo celular.
 - Solo se registra con lote activo (OPERACION, FIN_CICLO o MODO_SEGURO). MODO_SEGURO no se guarda en NVS.

@@ -78,7 +78,7 @@ ResultadoConfig config_desde_json(const char* json, size_t len, const char* lote
   long iv = d["intervalo_s"].isNull() ? (long)q.intervalo_s : d["intervalo_s"].as<long>();
 
   bool ok = q.x0 >= 0.70f && q.x0 <= 0.90f && q.xf >= 0.10f && q.xf <= 0.25f &&
-            q.setpoint >= 45 && q.setpoint <= 65 && iv >= 60 && iv <= 300;
+            q.setpoint >= 45 && q.setpoint <= 65 && iv >= INTERVALO_MIN_S && iv <= INTERVALO_MAX_S;
   if (!ok) return ResultadoConfig::RECHAZADA;
   q.intervalo_s = (uint16_t)iv;
   if (memcmp(&q, &p, sizeof q) == 0) return ResultadoConfig::SIN_CAMBIOS;

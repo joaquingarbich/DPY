@@ -67,6 +67,8 @@ test('validarConfig usa los rangos del firmware', () => {
   assert.equal(s.validarConfig({ x0: 0.83, xf: 0.17, setpoint: 60, intervalo_s: 60 }), null);
   assert.match(s.validarConfig({ setpoint: 70 }), /setpoint/);
   assert.match(s.validarConfig({ intervalo_s: 90.5 }), /entero/);
+  assert.equal(s.validarConfig({ intervalo_s: 1800 }), null);
+  assert.match(s.validarConfig({ intervalo_s: 1860 }), /intervalo_s/);
   assert.equal(s.validarConfig({}), null);
 });
 
@@ -164,7 +166,7 @@ test('flujo completo contra MongoDB', async (t) => {
     assert.equal(r.mqtt.topic, 'secador/SEC-01/config');
     assert.equal(r.mqtt.retain, true);
     const msg = JSON.parse(r.mqtt.payload);
-    assert.deepEqual(msg, { lote: 'L-04', x0: 0.8281, x0_lab: true, xf: 0.17, setpoint: 60, intervalo_s: 60 });
+    assert.deepEqual(msg, { lote: 'L-04', x0: 0.8281, x0_lab: true, xf: 0.17, setpoint: 60, intervalo_s: 600 });
     const l = await db.collection('lotes').findOne({ _id: 'L-04' });
     assert.ok(Math.abs(l.m_obj - s.masaObjetivo(6000, 0.8281, 0.17)) < 1e-9);
     // ahora los derivados aparecen, recalculados para los registros anteriores
@@ -198,11 +200,13 @@ test('flujo completo contra MongoDB', async (t) => {
     assert.equal(u[0].lote_activo, 1);
     assert.equal(u[0].alerta_fin_ciclo, 0);
     assert.equal(u[0].estado_panel, 'operacion');
+    assert.equal(u[0].alerta_sin_datos, 0);
     reloj = new Date('2026-10-01T14:00:00Z');        // 2 h después del último registro (12:00)
     u = (await srv.http('GET /api/ultimo', { headers: GRA, query: { eq: 'SEC-01' } })).body;
     assert.ok(u[0].min_sin_datos > 5);
     assert.equal(u[0].en_linea, 0);
     assert.equal(u[0].estado_panel, 'sin_conexion');
+    assert.equal(u[0].alerta_sin_datos, 1);
     await srv.ingresarEvento(evento('fin_ciclo', { masa_g: 1149, m_obj_g: 1150.2 }, { nivel: 'critico' }));
     u = (await srv.http('GET /api/ultimo', { headers: GRA, query: { eq: 'SEC-01' } })).body;
     assert.equal(u[0].alerta_fin_ciclo, 1);
@@ -218,6 +222,7 @@ test('flujo completo contra MongoDB', async (t) => {
     assert.equal(u[0].lote_estado, 'cerrado');
     assert.equal(u[0].lote_activo, 0);
     assert.equal(u[0].min_sin_datos, 0);
+    assert.equal(u[0].alerta_sin_datos, 0);
     assert.equal(u[0].alerta_fin_ciclo, 0);
   });
 

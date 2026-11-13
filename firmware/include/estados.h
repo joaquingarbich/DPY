@@ -8,7 +8,7 @@
 
 struct EntradaControl {
   uint32_t ahora_s;       // tiempo monótono en segundos
-  bool nueva_lectura;     // true cada 10 s (adquisición); false si solo hay botón
+  bool nueva_lectura;     // true cada 60 s (adquisición); false si solo hay botón
   Boton boton;
   bool estable;           // masa estable (§7.3)
   float masa_g;

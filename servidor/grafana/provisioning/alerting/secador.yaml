@@ -120,7 +120,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 'Sin datos de {{ $labels.eq }} hace {{ $values.A.Value }} min'
+          summary: 'Sin datos de {{ $labels.eq }}: más de dos intervalos de registro sin telemetría'
           description: 'No llega telemetría con un lote activo. Revise la energía y el WiFi del secador.'
         labels:
           equipo: secador
@@ -139,7 +139,7 @@ groups:
               root_selector: ''
               columns:
                 - { selector: eq, text: eq, type: string }
-                - { selector: min_sin_datos, text: min_sin_datos, type: number }
+                - { selector: alerta_sin_datos, text: alerta_sin_datos, type: number }
           - refId: B
             datasourceUid: __expr__
             model:
@@ -147,4 +147,4 @@ groups:
               type: threshold
               expression: A
               conditions:
-                - evaluator: { type: gt, params: [5] }
+                - evaluator: { type: gt, params: [0] }

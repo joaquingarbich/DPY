@@ -9,6 +9,7 @@ const AREA_COLECTOR_M2 = 0.65;
 const CP_AIRE = 1006;                       // J/(kg·K)
 const ESTADOS = ['espera', 'carga', 'operacion', 'fin_ciclo', 'modo_seguro'];
 const LOTE_ACTIVO = ['operacion', 'fin_ciclo', 'modo_seguro'];
+const INTERVALO_DEF = 600;   // s; el mismo del firmware (§11.3)
 const DEDUP_MS = 24 * 3600 * 1000;
 
 // Rangos físicos: los mismos del firmware (§7.1). null siempre es válido.
@@ -16,7 +17,7 @@ const RANGOS = {
   masa_g: [-200, 10500], t_cam: [-10, 90], hr_cam: [0, 100], t_ent: [-10, 90], hr_ent: [0, 100],
   t_col: [-10, 125], luz_lux: [0, 65535], duty: [0, 100], senal_dbm: [-127, 0],
 };
-const CONFIG = { x0: [0.70, 0.90], xf: [0.10, 0.25], setpoint: [45, 65], intervalo_s: [60, 300] };
+const CONFIG = { x0: [0.70, 0.90], xf: [0.10, 0.25], setpoint: [45, 65], intervalo_s: [60, 1800] };
 
 const CALIBRACION_INICIAL = {
   _id: 'actual', S: 211.34, C_T: 0.465, K: 46.9,
@@ -212,7 +213,7 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
     };
     if (!r.ts) doc.ts_servidor = true;
     await d.collection('mediciones').insertOne(doc);
-    vigilar(r.eq, r.lote, lote.intervalo_s || 60);
+    vigilar(r.eq, r.lote, lote.intervalo_s || INTERVALO_DEF);
     return { ok: true, doc };
   }
 
@@ -253,13 +254,13 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
       case 'inicio_lote':
         await lotes.updateOne({ _id: e.lote }, {
           $set: { inicio: ts, estado: 'carga', tara_cuentas: datos.tara_cuentas ?? null },
-          $setOnInsert: { eq: e.eq, x0_lab: false, setpoint: 60, intervalo_s: 60 },
+          $setOnInsert: { eq: e.eq, x0_lab: false, setpoint: 60, intervalo_s: INTERVALO_DEF },
         }, { upsert: true });
         break;
       case 'masa_inicial':
         await lotes.updateOne({ _id: e.lote }, {
           $set: { estado: 'operacion', inicio_operacion: ts, m0: datos.m0_g, x0: datos.x0, xf: datos.xf, m_obj: datos.m_obj_g },
-          $setOnInsert: { eq: e.eq, inicio: ts, x0_lab: false, setpoint: 60, intervalo_s: 60 },
+          $setOnInsert: { eq: e.eq, inicio: ts, x0_lab: false, setpoint: 60, intervalo_s: INTERVALO_DEF },
         }, { upsert: true });
         break;
       case 'carga_cancelada': await set({ estado: 'cancelado', cierre: ts }); break;
@@ -351,7 +352,7 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
         const activo = !!lote && LOTE_ACTIVO.includes(lote.estado);
         const desde = m ? m.ts : lote && lote.inicio_operacion;
         const min = desde ? (ahora() - desde) / 60000 : null;
-        const intervaloMin = ((lote && lote.intervalo_s) || 60) / 60;
+        const intervaloMin = ((lote && lote.intervalo_s) || INTERVALO_DEF) / 60;
         const enLinea = activo && min !== null && min <= 2 * intervaloMin;
         // Una sola palabra para el panel del operario.
         let estadoPanel = lote ? lote.estado : 'sin_lote';
@@ -368,6 +369,7 @@ function crear({ uri, db: nombreDb = 'secador', usuarios = {}, ahora = () => new
           estado_panel: estadoPanel,
           alerta_fin_ciclo: lote && lote.estado === 'fin_ciclo' ? 1 : 0,
           alerta_modo_seguro: lote && lote.estado === 'modo_seguro' ? 1 : 0,
+          alerta_sin_datos: activo && !enLinea ? 1 : 0,   // más de dos intervalos sin telemetría
         });
       }
       return json(200, filas);

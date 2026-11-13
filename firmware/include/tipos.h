@@ -11,7 +11,7 @@ enum : uint8_t {
   F_BH1750 = 1 << 3, F_HX711 = 1 << 4, F_LUZ_SAT = 1 << 5,
 };
 
-struct Lectura {            // resultado de un ciclo de adquisición (10 s)
+struct Lectura {            // resultado de un ciclo de adquisición (60 s)
   float t_cam, hr_cam;      // SHT31 0x45
   float t_ent, hr_ent;      // SHT31 0x44
   float t_col;              // DS18B20
@@ -27,7 +27,7 @@ struct ParametrosLote {     // llegan por secador/config; se guardan en NVS
   bool  x0_lab;             // true cuando x0 viene de la gravimetría
   float xf;                 // humedad final objetivo b.h. (fracción)
   float setpoint;           // °C
-  uint16_t intervalo_s;     // 60 a 300
+  uint16_t intervalo_s;     // 60 a 1800
 };
 
 struct Lote {

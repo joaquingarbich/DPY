@@ -179,8 +179,8 @@
         <details id="ayuda">
           <summary>Cómo iniciar y cerrar un lote</summary>
           <ol class="pasos">
-            <li><b>Tara:</b> con la bandeja <b>vacía</b> y quieta, pulse el botón del secador una vez (corto). El LED parpadea lento.</li>
-            <li><b>Carga:</b> ponga el mango, espere unos 30 s sin tocar la bandeja y <b>mantenga el botón presionado 3 s</b> hasta que el LED quede fijo. Empieza el secado.</li>
+            <li><b>Tara:</b> con la bandeja <b>vacía</b> y quieta unos 3 min, pulse el botón del secador una vez (corto). El LED parpadea lento.</li>
+            <li><b>Carga:</b> ponga el mango, espere unos 3 min sin tocar la bandeja y <b>mantenga el botón presionado 3 s</b> hasta que el LED quede fijo. Empieza el secado.</li>
             <li><b>Fin:</b> cuando esta pantalla diga <b>“FIN: retire la bandeja”</b> (también llega un aviso por Telegram), retire la bandeja.</li>
             <li><b>Cierre:</b> mantenga el botón presionado 3 s. El lote queda cerrado.</li>
           </ol>
@@ -227,7 +227,7 @@
         <div class="fila">
           <div><label for="sp-in">Setpoint de la cámara (°C)</label><input id="sp-in" type="number" step="0.5" min="45" max="65" required></div>
           <div><label for="int-in">Intervalo de registro</label>
-            <select id="int-in"><option value="60">1 min</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option></select></div>
+            <select id="int-in"><option value="60">1 min</option><option value="300">5 min</option><option value="600">10 min</option><option value="900">15 min</option><option value="1800">30 min</option></select></div>
           <div><label for="xf-obj">Humedad final objetivo (%)</label><input id="xf-obj" type="number" step="0.1" min="10" max="25" required></div>
           <button type="submit">Enviar al equipo</button>
         </div>
@@ -341,7 +341,7 @@ const ESTADOS = {
   fin_ciclo:    ['e-alerta', 'FIN: retire la bandeja', 'El mango llegó a la humedad final. Retire la bandeja y mantenga el botón presionado 3 s para cerrar el lote.'],
   modo_seguro:  ['e-peligro', 'Avise al técnico', 'Falla el sensor de la cámara. El ventilador está al máximo para proteger el producto.'],
   sin_conexion: ['e-peligro', 'Sin conexión', 'El secador no envía datos. Revise que tenga energía y WiFi.'],
-  carga:        ['e-neutro', 'Cargando la bandeja', 'Ponga el mango, espere 30 s y mantenga el botón presionado 3 s.'],
+  carga:        ['e-neutro', 'Cargando la bandeja', 'Ponga el mango, espere 3 min sin tocar la bandeja y mantenga el botón presionado 3 s.'],
   cerrado:      ['e-neutro', 'Sin lote en curso', 'El último lote está cerrado. Para empezar otro, vea “Cómo iniciar y cerrar un lote”.'],
   cancelado:    ['e-neutro', 'Sin lote en curso', 'La carga se canceló. Para empezar otro, vea “Cómo iniciar y cerrar un lote”.'],
   sin_lote:     ['e-neutro', 'Sin lote en curso', 'Para empezar, vea “Cómo iniciar y cerrar un lote”.'],
@@ -594,7 +594,7 @@ async function cargarTablero() {
   const ult = filas[filas.length - 1] || {}, pri = filas[0] || {};
   const tcam = col(filas, 't_cam'), mdot = col(filas, 'm_dot'), eta = col(filas, 'eta'), sen = col(filas, 'senal_dbm');
   const horas = filas.length > 1 ? (Date.parse(ult.ts) - Date.parse(pri.ts)) / 3.6e6 : 0;
-  const esperados = horas > 0 ? Math.floor(horas * 3600 / (l.intervalo_s || 60)) + 1 : filas.length;
+  const esperados = horas > 0 ? Math.floor(horas * 3600 / (l.intervalo_s || 600)) + 1 : filas.length;
   const pausas = filas.filter((f) => f.pausa).length;
   const actual = u && u.lote === l.id;
   const pct = (v, d = 1) => (v === null || v === undefined ? '—' : num(v * 100, d));
@@ -668,7 +668,7 @@ function mostrarLote() {
   ] : [];
   const t = $('resumen'); t.innerHTML = '';
   for (const [k, v] of filas) { const tr = t.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
-  if (l) { $('sp-in').value = l.setpoint ?? 60; $('int-in').value = String(l.intervalo_s ?? 60); $('xf-obj').value = l.xf ? Math.round(l.xf * 1000) / 10 : 17; }
+  if (l) { $('sp-in').value = l.setpoint ?? 60; $('int-in').value = String(l.intervalo_s ?? 600); $('xf-obj').value = l.xf ? Math.round(l.xf * 1000) / 10 : 17; }
   for (const f of ['f-x0', 'f-cfg', 'f-xf']) $(f).querySelector('button').disabled = !l;
   $('b-csv').disabled = !l;
 }

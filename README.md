@@ -32,7 +32,7 @@ Un ESP32 en el secador mide la masa del mango, las temperaturas, las humedades y
 
 1. **Tara.** Con la bandeja vacía, el operario pulsa el botón del secador (corto). El equipo pesa la bandeja y crea el lote (`L-05`). El servidor lo registra solo.
 2. **Carga.** Pone el mango y mantiene el botón 3 s. El equipo guarda la masa inicial y empieza a secar:
-   - Cada 10 s lee los sensores. Un controlador PI ajusta el ventilador para mantener la cámara en el setpoint (60 °C).
+   - Cada minuto lee los sensores, balanza incluida. Un controlador PI ajusta el ventilador para mantener la cámara en el setpoint (60 °C).
    - Cada minuto guarda un registro en la microSD y lo envía al servidor. Si no hay red, lo reenvía al reconectarse.
    - De noche (sin sol) entra en pausa y apaga el ventilador.
    - Si falla el sensor de la cámara, entra en modo seguro con el ventilador al máximo.
@@ -61,7 +61,7 @@ Un ESP32 en el secador mide la masa del mango, las temperaturas, las humedades y
 | `filtros` | Mediana y media que ignoran lecturas inválidas |
 | `control_pi`, `ventilador` | PI con anti-windup, PWM a 25 kHz, interruptor y tacómetro |
 | `estados`, `fin_ciclo` | Máquina de estados (espera, carga, operación, fin de ciclo, modo seguro), pausa nocturna, masa objetivo |
-| `registro_json`, `almacenamiento` | Registro de 60 s en JSON; microSD con reenvío de pendientes |
+| `registro_json`, `almacenamiento` | Registro de 10 min en JSON; microSD con reenvío de pendientes |
 | `enlace`, `mqtt`, `reloj` | WiFi (reemplazable por celular), MQTT con TLS, hora por DS3231 y NTP |
 | `persistencia`, `boton`, `diagnostico`, `main` | Memoria NVS, botón, LED, consola serie y las cuatro tareas de FreeRTOS |
 

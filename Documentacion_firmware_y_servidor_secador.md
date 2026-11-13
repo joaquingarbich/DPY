@@ -110,7 +110,7 @@ firmware/
 │   ├── estados.cpp         # máquina de estados (sin hardware, probada en native)
 │   ├── fin_ciclo.cpp       # masa objetivo y detección
 │   ├── ventilador.cpp      # PWM, interruptor, tacómetro
-│   ├── registro_json.cpp   # armado del registro de 60 s
+│   ├── registro_json.cpp   # armado del registro de 10 min
 │   ├── almacenamiento.cpp  # microSD (JSON Lines) y puntero de pendientes
 │   ├── enlace.cpp          # interfaz Enlace + implementación WiFi
 │   ├── mqtt.cpp            # cliente esp-mqtt, colas y PUBACK
@@ -133,7 +133,7 @@ firmware/
 ```cpp
 enum class Estado : uint8_t { ESPERA, CARGA, OPERACION, FIN_CICLO, MODO_SEGURO };
 
-struct Lectura {            // resultado de un ciclo de adquisición (10 s)
+struct Lectura {            // resultado de un ciclo de adquisición (60 s)
   float t_cam, hr_cam;      // SHT31 0x45
   float t_ent, hr_ent;      // SHT31 0x44
   float t_col;              // DS18B20
@@ -149,7 +149,7 @@ struct ParametrosLote {     // llegan por secador/config; se guardan en NVS
   bool  x0_lab;             // true cuando x0 viene de la gravimetría
   float xf;                 // humedad final objetivo b.h. (fracción)
   float setpoint;           // °C
-  uint16_t intervalo_s;     // 60 a 300
+  uint16_t intervalo_s;     // 60 a 1800
 };
 
 struct Lote {
@@ -163,7 +163,7 @@ struct Lote {
   bool pausa;
 };
 
-struct Registro {           // consolidado de 60 s (lo que se guarda y se envía)
+struct Registro {           // consolidado del intervalo, 10 min por defecto (lo que se guarda y se envía)
   char ts[21];              // "2026-10-01T19:05:00Z"
   uint32_t seq;
   float masa_g, t_cam, hr_cam, t_ent, hr_ent, t_col, luz_lux, duty;
@@ -188,9 +188,9 @@ Recursos de FreeRTOS:
 
 | Tarea | Núcleo | Prioridad | Periodo | Pila (bytes) | Función |
 |---|---|---|---|---|---|
-| `tAdquisicion` | 1 | 3 | 10 s (`vTaskDelayUntil`) | 4096 | Lee los cinco sensores, valida rangos, aplica filtros, corrige la masa por temperatura y publica la `Lectura` filtrada. Notifica a `tControl`. |
-| `tControl` | 1 | 4 | Al recibir la notificación (cada 10 s) | 4096 | Atiende el botón, ejecuta la máquina de estados, la lógica de pausa, el PI y el fin de ciclo. Escribe el PWM. |
-| `tRegistro` | 1 | 2 | Intervalo de registro (60 s por defecto) alineado al minuto UTC | 6144 | Consolida las seis lecturas del intervalo, arma el JSON, lo escribe en la microSD y lo encola para transmisión. |
+| `tAdquisicion` | 1 | 3 | 60 s (`vTaskDelayUntil`, en tramos de 5 s para alimentar el watchdog) | 4096 | Lee los cinco sensores, valida rangos, aplica filtros, corrige la masa por temperatura y publica la `Lectura` filtrada. Notifica a `tControl`. |
+| `tControl` | 1 | 4 | Al recibir la notificación (cada 60 s) | 4096 | Atiende el botón, ejecuta la máquina de estados, la lógica de pausa, el PI y el fin de ciclo. Escribe el PWM. |
+| `tRegistro` | 1 | 2 | Intervalo de registro (10 min por defecto) alineado a múltiplos del intervalo en UTC | 6144 | Consolida las diez lecturas del intervalo, arma el JSON, lo escribe en la microSD y lo encola para transmisión. |
 | `tComunicacion` | 0 | 2 | Bucle con espera de eventos | 8192 | Mantiene WiFi y MQTT, publica la cola, reenvía pendientes de la microSD, recibe `secador/config` y sincroniza la hora por NTP. |
 
 El núcleo 0 queda para la pila WiFi y la tarea de comunicación; las tareas de tiempo real van en el núcleo 1. Así una reconexión lenta no retrasa el control.
@@ -203,7 +203,9 @@ Las cuatro tareas se suscriben al watchdog de tareas (`esp_task_wdt`) con un pla
 
 ## 7. Adquisición y filtrado
 
-### 7.1 Lectura por sensor (cada 10 s)
+### 7.1 Lectura por sensor (cada 60 s)
+
+Todos los sensores, balanza incluida, se leen una vez por minuto en todos los estados.
 
 | Sensor | Procedimiento | Rango válido | Si falla |
 |---|---|---|---|
@@ -216,10 +218,10 @@ Un sensor que devuelve `NAN` tres ciclos seguidos genera el evento `error_sensor
 
 ### 7.2 Filtros
 
-- **Masa**: mediana de las 8 muestras de cada lectura (elimina golpes de viento y vibraciones) y, en el registro de 60 s, mediana de las seis lecturas del intervalo.
+- **Masa**: mediana de las 8 muestras de cada lectura (elimina golpes de viento y vibraciones) y, en el registro (10 min por defecto), mediana de las diez lecturas del intervalo.
 - **Temperaturas, humedades y luz**: media de las lecturas válidas del intervalo.
 - **Descartes**: una lectura de masa que se aleja más de 15 g de la mediana del intervalo se descarta y se cuenta en `n_descartes`, junto con las lecturas `NAN`.
-- **Lazo de control**: usa la última temperatura de cámara válida, con mediana de las tres últimas lecturas (30 s).
+- **Lazo de control**: usa la última temperatura de cámara válida, con mediana de las tres últimas lecturas (3 min).
 
 ### 7.3 Celda de carga
 
@@ -231,7 +233,7 @@ masa_g = (cuentas − tara_cuentas) / S  +  C_T · (T_cam − 25)
 - `C_T` = +0,465 g/°C: coeficiente de compensación, con signo opuesto a la pendiente de deriva medida (−0,465 g/°C). Se guarda en NVS (`cal_CT`). La lectura cae al calentarse la celda, por eso el término se suma.
 - `tara_cuentas` se toma con la bandeja vacía al pulsar el botón en `ESPERA` (promedio de 20 lecturas estables).
 - Estabilidad: una lectura se considera estable si la desviación estándar de las últimas 10 muestras brutas del HX711 es menor de 2 g.
-- Tara y `m0` usan el promedio de las últimas 20 muestras brutas, y solo si esas 20 también tienen una desviación menor de 2 g (así no se mezclan muestras de antes de cargar). En la práctica, la bandeja debe quedar quieta unos 25 s antes de la pulsación.
+- Tara y `m0` usan el promedio de las últimas 20 muestras brutas, y solo si esas 20 también tienen una desviación menor de 2 g (así no se mezclan muestras de antes de cargar). Como se toman 8 muestras por minuto, las 20 muestras abarcan tres lecturas: en la práctica, la bandeja debe quedar quieta unos 3 min antes de la pulsación.
 
 ---
 
@@ -251,7 +253,7 @@ u_k = saturar(Kp · e_k + I_k, 30, 100)
 |---|---|---|
 | `Kp` | 7,0 %/°C | Sintonía SIMC con τc = 2θ (K = −0,162 °C/%, τ = 20,6 min, θ = 6,0 min) |
 | `Ki` | 0,0057 %/(°C·s) (Ti = 20,6 min) | Igual |
-| `Ts` | 10 s | Periodo del lazo |
+| `Ts` | 60 s | Periodo del lazo (menor que θ/5 = 72 s, por eso `Kp` y `Ki` se mantienen) |
 | Límites | 30 % a 100 % | Torque mínimo y extracción mínima de aire húmedo |
 | `T_sp` por defecto | 60 °C | Centro del rango de trabajo; se cambia por `secador/config` |
 
@@ -278,7 +280,7 @@ En la versión 1.0.0 (lote L-01) el ventilador se apagaba en `FIN_CICLO`. Con so
 
 ### 8.4 Tacómetro
 
-Se cuentan pulsos con interrupción en flanco de bajada durante cada ciclo de 10 s. Si `duty ≥ 30 %` y el ventilador marca menos de 400 rpm por tres ciclos, se emite el evento `falla_ventilador`. No cambia el estado; queda registrado y se avisa en el tablero.
+Se cuentan pulsos con interrupción en flanco de bajada durante cada ciclo de 60 s. Si `duty ≥ 30 %` y el ventilador marca menos de 400 rpm por tres ciclos (3 min), se emite el evento `falla_ventilador`. No cambia el estado; queda registrado y se avisa en el tablero.
 
 ---
 
@@ -291,11 +293,11 @@ Se cuentan pulsos con interrupción en flanco de bajada durante cada ciclo de 10
 | `ESPERA` | Pulsación corta con lectura estable | `CARGA` | Guarda `tara_cuentas`; crea el id de lote con el siguiente número (`L-xx`); evento `inicio_lote`; LED parpadeo lento |
 | `CARGA` | Pulsación larga (> 3 s) con lectura estable y masa > 500 g | `OPERACION` | Guarda `m0_g`; `seq = 0`; abre el archivo del lote en la microSD; evento `masa_inicial` |
 | `CARGA` | Sin acción por 30 min (cualquier pulsación reinicia el plazo) | `ESPERA` | Evento `carga_cancelada` |
-| `OPERACION` | Masa filtrada < `m_obj` en 3 registros seguidos | `FIN_CICLO` | Evento crítico `fin_ciclo`; LED parpadeo rápido |
+| `OPERACION` | Masa filtrada < `m_obj` en 2 registros seguidos (20 min con el intervalo por defecto) | `FIN_CICLO` | Evento crítico `fin_ciclo`; LED parpadeo rápido |
 | `OPERACION` | Dos pulsaciones largas en menos de 10 s | `ESPERA` | Cierre anticipado; evento `cierre_lote` con motivo `manual` |
 | `FIN_CICLO` | Pulsación larga | `ESPERA` | Evento `cierre_lote`; cierra el archivo; borra el lote activo de NVS |
-| `OPERACION` o `FIN_CICLO` | SHT31 de cámara inválido en 3 lecturas seguidas (30 s) | `MODO_SEGURO` | Guarda el estado previo; ventilador al 100 %; evento crítico `modo_seguro` |
-| `MODO_SEGURO` | 6 lecturas válidas seguidas (60 s) | Estado previo | Evento `fin_modo_seguro` |
+| `OPERACION` o `FIN_CICLO` | SHT31 de cámara inválido en 3 lecturas seguidas (3 min) | `MODO_SEGURO` | Guarda el estado previo; ventilador al 100 %; evento crítico `modo_seguro` |
+| `MODO_SEGURO` | 6 lecturas válidas seguidas (6 min) | Estado previo | Evento `fin_modo_seguro` |
 
 El flag `pausa` no es un estado: solo existe dentro de `OPERACION` y se envía en cada registro. En `MODO_SEGURO` el botón no actúa.
 
@@ -353,7 +355,7 @@ Solo se registra con un lote activo (`OPERACION`, `FIN_CICLO` o `MODO_SEGURO`). 
 - Formato FAT32. Un archivo por lote: `/lotes/<lote>.jsonl`, un registro por línea.
 - Archivo `/lotes/<lote>.ptr` con dos enteros: desplazamiento en bytes del primer registro no confirmado y su `seq`.
 - Cada registro se escribe (abrir, agregar, `flush()`, cerrar) antes de enviarlo. El SD manda: `tComunicacion` siempre lee de la microSD, tanto lo nuevo como lo pendiente. Un mutex protege la microSD entre `tRegistro` y `tComunicacion`.
-- Con 60 s de intervalo, un lote de 52 h ocupa alrededor de 1 MB.
+- Con 10 min de intervalo, un lote de 52 h ocupa alrededor de 100 kB.
 - Si la microSD falla al escribir, se emite `error_sd`, la línea va a `qRegistros` y se transmite directo. Se reintenta montar la tarjeta en cada registro.
 
 ### 10.3 Reenvío de pendientes
@@ -408,14 +410,14 @@ Contenido de `estado` (al conectar y en cada cambio): `{"en_linea":true,"fw":"1.
 ### 11.3 Mensaje de configuración
 
 ```json
-{ "lote": "L-02", "x0": 0.8281, "x0_lab": true, "xf": 0.170, "setpoint": 60.0, "intervalo_s": 60 }
+{ "lote": "L-02", "x0": 0.8281, "x0_lab": true, "xf": 0.170, "setpoint": 60.0, "intervalo_s": 600 }
 ```
 
 - `x0_lab` es opcional. Solo cuando viene en `true` el equipo marca `x0_lab = true` y quita la inhibición de 12 h; si falta, el `x0` se toma como provisional. El servidor lo envía en `true` al cargar la gravimetría y en todo mensaje posterior del lote.
 - Los campos que faltan conservan su valor. Un mensaje igual a lo que ya hay (por ejemplo, el retenido al reconectar) no genera evento.
 - Se acepta desde `CARGA`, porque el lote ya tiene id.
 
-Validación en el equipo: `0,70 ≤ x0 ≤ 0,90`; `0,10 ≤ xf ≤ 0,25`; `45 ≤ setpoint ≤ 65`; `60 ≤ intervalo_s ≤ 300`. Un valor fuera de rango se rechaza entero y se responde con un evento `config_rechazada`. Si `lote` no coincide con el lote activo, se ignora. Lo aceptado se guarda en NVS y se confirma con el evento `config_aplicada`.
+Validación en el equipo: `0,70 ≤ x0 ≤ 0,90`; `0,10 ≤ xf ≤ 0,25`; `45 ≤ setpoint ≤ 65`; `60 ≤ intervalo_s ≤ 1800` (600 por defecto). Un valor fuera de rango se rechaza entero y se responde con un evento `config_rechazada`. Si `lote` no coincide con el lote activo, se ignora. Lo aceptado se guarda en NVS y se confirma con el evento `config_aplicada`.
 
 ### 11.4 Hora
 
@@ -442,7 +444,7 @@ Validación en el equipo: `0,70 ≤ x0 ≤ 0,90`; `0,10 ≤ xf ≤ 0,25`; `45 �
 | `seq` | uint32 | Último `seq` (se escribe cada 10 registros y en cada evento, para no desgastar la flash) |
 | `n_lote` | uint16 | Contador para generar el siguiente id (se fija con `lote n`) |
 
-`MODO_SEGURO` no se guarda en `lote_est`: tras un reinicio se retoma el estado previo y, si el SHT31 sigue fallando, se vuelve a modo seguro en 30 s. Un lote en `CARGA` no se retoma.
+`MODO_SEGURO` no se guarda en `lote_est`: tras un reinicio se retoma el estado previo y, si el SHT31 sigue fallando, se vuelve a modo seguro en 3 min. Un lote en `CARGA` no se retoma.
 
 Al arrancar: si `lote_id` existe y su estado es `OPERACION` o `FIN_CICLO`, el equipo retoma el lote. Toma `seq` del último registro del archivo `.jsonl`, que es más reciente que el de NVS, y emite el evento `reanudacion` con el motivo del reinicio (`esp_reset_reason()`).
 
@@ -595,7 +597,7 @@ avance = (m0 − masa_g) / (m0 − m_obj)
 - Reglas de alerta (evaluación cada 1 min sobre `/api/ultimo`, una instancia por equipo):
   - `Fin de ciclo`: `alerta_fin_ciclo > 0` (el lote está en `fin_ciclo`).
   - `Modo seguro`: `alerta_modo_seguro > 0`.
-  - `Sin datos`: `min_sin_datos > 5` con un lote activo.
+  - `Sin datos`: `alerta_sin_datos > 0`: con un lote activo, más de dos intervalos de registro sin telemetría (20 min con el intervalo por defecto).
 - Punto de contacto: Telegram (bot del proyecto) al celular del operario y al grupo del equipo, con un mensaje en español que indica la acción ("Fin de ciclo en SEC-01: retire la bandeja"). Repite cada hora mientras la alerta siga activa.
 - Cada usuario entra directo a su tablero, y la interfaz está en español.
 
@@ -670,6 +672,7 @@ Decisiones tomadas al escribir el código. Las secciones anteriores ya las inclu
 | 12 | `senal_dbm` = `null` sin enlace | 0 dBm se leería como señal perfecta | §10.1 |
 | 13 | Pulsación larga registrada a los 3 s | Coincide con el LED fijo y hace natural la doble pulsación | §9.3 |
 | 14 | Integral al volver de `MODO_SEGURO` = 100 % | Transferencia sin salto | §8.1 |
+| 15 | Lectura de todos los sensores cada 60 s (antes 10 s); registro y envío cada 10 min por defecto (antes 1 min), configurable de 1 a 30 min; `Ts` del PI = 60 s; fin de ciclo con 2 registros seguidos (antes 3) | Pedido del proyecto: menos datos y menos consumo. Con 10 min por registro, 3 registros atrasarían el aviso 30 min | §6, §7, §8, §9.1, §10.2, §11.3 |
 
 ### 18.2 Servidor
 
@@ -694,3 +697,4 @@ Decisiones tomadas al escribir el código. Las secciones anteriores ya las inclu
 | 17 | Un equipo no puede escribir telemetría ni eventos en el lote de otro; el `eq` del lote no se reasigna | Aislamiento entre secadores | §15.3 |
 | 18 | `operario` y `tecnico` usan la misma clave en `/app/` y en Grafana | Una sola clave por persona | §15.4, §15.5 |
 | 19 | Gráficas en `/app/` para el operario; pestaña "Tablero" del técnico con indicadores, gráficas, eventos y rechazados; `xf` editable desde la página | Ver los datos sin entrar a Grafana, cada rol con lo que necesita | §15.5 |
+| 20 | Intervalo por defecto de 600 s, rango hasta 1800 s; alerta "Sin datos" y estado "Sin conexión" a los dos intervalos sin telemetría (`alerta_sin_datos` en `/api/ultimo`) | Acompaña el cambio 15 del firmware; con el umbral fijo de 5 min la alerta saltaba entre registros | §11.3, §15.3, §15.4 |

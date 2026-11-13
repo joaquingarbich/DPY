@@ -86,11 +86,11 @@ El servidor tiene que estar corriendo para que los datos de la placa lleguen a l
 
 - [ ] Iniciar un lote de prueba con una masa conocida, por ejemplo 2 kg:
   - Pulsación corta con la bandeja vacía.
-  - Poner la masa, esperar 30 s y hacer una pulsación larga.
+  - Poner la masa, esperar 3 min y hacer una pulsación larga.
 - [ ] En `/app/` (usuario `operario`) aparece **"Secando"** y el lote nuevo.
 - [ ] Al minuto, en Atlas → `secador.mediciones` aparecen registros con `meta.lote` igual al lote nuevo.
 - [ ] Cargar una humedad inicial desde `/app/` → *Acciones del técnico*. En los eventos aparece "Configuración aplicada".
-- [ ] **Prueba de corte de red:** apagar el WiFi 5 min y volver a encenderlo. Los registros de esos minutos deben llegar igual, porque salen de la microSD.
+- [ ] **Prueba de corte de red:** apagar el WiFi 30 min y volver a encenderlo. Los registros de esos minutos deben llegar igual, porque salen de la microSD.
 - [ ] **Prueba de corte de energía:** desenchufar la placa y volver a enchufarla. Debe aparecer el evento "Reinicio del equipo" y el lote debe seguir.
 - [ ] Cerrar el lote con dos pulsaciones largas y descargar el CSV.
 

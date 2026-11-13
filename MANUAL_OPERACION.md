@@ -18,8 +18,8 @@ Se hace **en el secador, con el botón**. Ni la página ni Grafana pueden inicia
 
 | Paso | Qué hacer | Cómo saber que funcionó |
 |---|---|---|
-| 1. Tara | Bandeja **vacía**, sin tocarla unos 30 s. **Pulsación corta** (menos de 1 s) | El LED parpadea lento. En `/app/`: "Cargando la bandeja" |
-| 2. Carga | Ponga el mango en la bandeja. Espere **30 s sin tocarla**. **Mantenga el botón 3 s**, hasta que el LED quede fijo, y suelte | El LED da un destello cada 5 s. En `/app/`: "Secando" (verde) |
+| 1. Tara | Bandeja **vacía**, sin tocarla unos **3 min** (la balanza se lee una vez por minuto). **Pulsación corta** (menos de 1 s) | El LED parpadea lento. En `/app/`: "Cargando la bandeja" |
+| 2. Carga | Ponga el mango en la bandeja. Espere **3 min sin tocarla**. **Mantenga el botón 3 s**, hasta que el LED quede fijo, y suelte | El LED da un destello cada 5 s. En `/app/`: "Secando" (verde) |
 
 Si la pulsación no hace nada, la bandeja se movió o la masa es de 500 g o menos. Espere quieto y repita. Si en la carga pasan 30 min sin confirmar, el equipo la cancela solo y vuelve al paso 1.
 
@@ -74,7 +74,7 @@ Entre a `/app/` con el usuario `tecnico`. La pestaña **Tablero** muestra los in
 | Acción | Cuándo |
 |---|---|
 | **Setpoint de la cámara** (45 a 65 °C) | Para probar otra temperatura de secado |
-| **Intervalo de registro** (1 a 5 min) | Normalmente 1 min |
+| **Intervalo de registro** (1 a 30 min) | Normalmente 10 min |
 | **Humedad final objetivo** (10 a 25 %) | Normalmente 17 %. Cambia la masa objetivo y, con ella, el fin de ciclo |
 | **Humedad final medida** | Al terminar, con la gravimetría del producto seco. Solo queda guardada para el informe |
 | **Descargar CSV** | Para el informe: todos los registros del lote con los valores calculados |
@@ -98,7 +98,7 @@ Arriba se elige el lote y el rango de tiempo. Arrastrando sobre un gráfico se h
 |---|---|
 | Fin de ciclo: retire la bandeja | El lote llegó a la masa objetivo |
 | Modo seguro | Falla el sensor de la cámara |
-| Sin datos | Pasan más de 5 min sin datos con un lote en curso |
+| Sin datos | Pasan más de dos intervalos de registro (20 min con el intervalo normal) sin datos con un lote en curso |
 
 Se repiten cada hora mientras sigan activas. Cuando se resuelven, llega "✅ Resuelto".
 
@@ -117,9 +117,9 @@ Por la consola serie del equipo (`firmware/MANUAL.md`, sección 6):
 
 | Problema | Qué hacer |
 |---|---|
-| La pulsación no hace nada | Esperar 30 s con la bandeja quieta y repetir. En la carga, la masa debe superar 500 g |
+| La pulsación no hace nada | Esperar 3 min con la bandeja quieta y repetir. En la carga, la masa debe superar 500 g |
 | "Sin conexión" durante mucho tiempo | Revisar la energía y el router. Los datos quedan en la microSD y se envían solos al volver la red |
 | No llegan alertas a Telegram | El operario debe haberle escrito al bot al menos una vez. El técnico puede probar en Grafana: *Alertas → Puntos de contacto → Probar* |
 | No aparece el avance | Falta cargar la humedad inicial de laboratorio (2.1) |
-| "Avise al técnico" | Revisar el cable y el sensor SHT31 de la cámara. El equipo vuelve solo a la normalidad cuando el sensor responde 1 min seguido |
+| "Avise al técnico" | Revisar el cable y el sensor SHT31 de la cámara. El equipo vuelve solo a la normalidad cuando el sensor responde 6 min seguidos |
 | Olvidé la clave | Pedirla al responsable: está en `servidor/.env` |

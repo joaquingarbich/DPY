@@ -35,7 +35,7 @@ bool nvs_cargar_lote(Lote& l, ParametrosLote& q) {
 void nvs_guardar_lote(const Lote& l, const ParametrosLote& q) {
   p.putString("lote_id", l.id);
   // MODO_SEGURO no se guarda: tras un reinicio se retoma el estado previo y,
-  // si el SHT31 sigue fallando, vuelve a modo seguro en 30 s.
+  // si el SHT31 sigue fallando, vuelve a modo seguro en 3 min.
   if (l.estado != Estado::MODO_SEGURO) p.putUChar("lote_est", (uint8_t)l.estado);
   p.putFloat("tara", l.tara_cuentas);
   p.putFloat("m0", l.m0_g);

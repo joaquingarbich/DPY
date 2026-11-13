@@ -81,9 +81,9 @@ Un `nan` en un valor indica un sensor desconectado o mal cableado. Revise el cab
 
 ### 6.2 Calibrar la celda de carga
 
-1. Deje la **bandeja vacía** y quieta unos 30 s.
+1. Deje la **bandeja vacía** y quieta unos 3 min (la balanza se lee una vez por minuto).
 2. Escriba `cal tara`. Responde `cero = … cuentas`. Si dice `lectura inestable`, espere y repita.
-3. Ponga la **masa patrón** en el centro de la bandeja y espere 30 s.
+3. Ponga la **masa patrón** en el centro de la bandeja y espere 3 min.
 4. Escriba `cal S <masa en g>`, por ejemplo `cal S 2000`. Responde `S = … cuentas/g guardado`. El valor de referencia es cercano a 211,34.
 5. Retire la masa.
 
@@ -115,8 +115,8 @@ Escriba `estado` y verifique `cal S`, `CT`, `K` y `n_lote`. La calibración y el
 | Paso | Acción | LED |
 |---|---|---|
 | Equipo listo | — | Apagado (`ESPERA`) |
-| 1. Tomar tara | Bandeja vacía y quieta ~30 s → **pulsación corta** | Parpadeo lento (`CARGA`) |
-| 2. Confirmar carga | Cargar el mango, esperar ~30 s quieto → **pulsación larga** (> 3 s, hasta que el LED quede fijo) | Destello cada 5 s (`OPERACION`) |
+| 1. Tomar tara | Bandeja vacía y quieta ~3 min → **pulsación corta** | Parpadeo lento (`CARGA`) |
+| 2. Confirmar carga | Cargar el mango, esperar ~3 min quieto → **pulsación larga** (> 3 s, hasta que el LED quede fijo) | Destello cada 5 s (`OPERACION`) |
 | Pausa nocturna | Automática | Doble destello cada 5 s |
 | Fin de ciclo | Llega la alerta por Telegram | Parpadeo rápido |
 | 3. Cerrar lote | Retirar la bandeja → **pulsación larga** | Apagado |

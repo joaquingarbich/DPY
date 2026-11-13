@@ -97,6 +97,11 @@ void test_config() {
   TEST_ASSERT_EQUAL_FLOAT(0.83f, r.x0);
   const char* iv = "{\"lote\":\"L-02\",\"intervalo_s\":65596}";
   TEST_ASSERT_EQUAL(ResultadoConfig::RECHAZADA, config_desde_json(iv, strlen(iv), "L-02", r));
+  const char* iv_max = "{\"lote\":\"L-02\",\"intervalo_s\":1800}";
+  TEST_ASSERT_EQUAL(ResultadoConfig::APLICADA, config_desde_json(iv_max, strlen(iv_max), "L-02", r));
+  TEST_ASSERT_EQUAL(1800, r.intervalo_s);
+  const char* iv_alto = "{\"lote\":\"L-02\",\"intervalo_s\":1860}";
+  TEST_ASSERT_EQUAL(ResultadoConfig::RECHAZADA, config_desde_json(iv_alto, strlen(iv_alto), "L-02", r));
 
   // otro lote o sin lote activo → se ignora
   TEST_ASSERT_EQUAL(ResultadoConfig::IGNORADA, config_desde_json(ok, strlen(ok), "L-03", r));
